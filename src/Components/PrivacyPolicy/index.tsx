@@ -17,52 +17,51 @@ const PrivacyPolicyScreen: React.FC = () => {
   return (
     <View style={styles.container}>
       <Appbar.Header style={styles.header}>
-        <Appbar.Content title="Política de Privacidade" color={COLORS.white} />
+        <Appbar.Content title="Privacy Policy" color={COLORS.white} />
       </Appbar.Header>
 
       <ScrollView contentContainerStyle={styles.scrollViewContent}>
         <Card style={styles.card}>
           <Card.Content>
-            <Text style={styles.title}>Bem-vindo à nossa aplicação de Culinária!</Text>
+            <Text style={styles.title}>Welcome to our Cooking Application!</Text>
             <Text style={styles.paragraph}>
-              Sua privacidade é muito importante para nós. Este documento explica como
-              coletamos, usamos e protegemos suas informações.
+              Your privacy is very important to us. This document explains how we
+              collect, use, and protect your information.
             </Text>
 
-            <Text style={styles.subtitle}>1. Informações Coletadas</Text>
+            <Text style={styles.subtitle}>1. Information Collected</Text>
             <Text style={styles.paragraph}>
-              Utilizamos o Firebase para gerenciar funcionalidades como autenticação
-              e armazenamento de dados. As informações coletadas incluem seu nome,
-              email e preferências de receitas. Não compartilhamos esses dados com
-              terceiros.
+              We use Firebase to manage features such as authentication and data
+              storage. The information collected includes your name, email, and
+              recipe preferences. We do not share this data with third parties.
             </Text>
 
-            <Text style={styles.subtitle}>2. Como Utilizamos as Informações</Text>
+            <Text style={styles.subtitle}>2. How We Use Information</Text>
             <Text style={styles.paragraph}>
-              As informações coletadas são utilizadas para personalizar sua
-              experiência, sugerir receitas e aprimorar nossos serviços.
+              The information collected is used to personalize your experience,
+              suggest recipes, and improve our services.
             </Text>
 
-            <Text style={styles.subtitle}>3. Segurança</Text>
+            <Text style={styles.subtitle}>3. Security</Text>
             <Text style={styles.paragraph}>
-              Adotamos medidas rigorosas para proteger suas informações. O Firebase
-              garante o armazenamento seguro e criptografado de seus dados.
+              We adopt strict measures to protect your information. Firebase
+              ensures secure and encrypted storage of your data.
             </Text>
 
-            <Text style={styles.subtitle}>4. Seus Direitos</Text>
+            <Text style={styles.subtitle}>4. Your Rights</Text>
             <Text style={styles.paragraph}>
-              Você pode acessar, corrigir ou excluir suas informações a qualquer
-              momento. Entre em contato conosco para suporte.
+              You can access, correct, or delete your information at any time.
+              Contact us for support.
             </Text>
 
-            <Text style={styles.subtitle}>5. Contato</Text>
+            <Text style={styles.subtitle}>5. Contact</Text>
             <Text style={styles.paragraph}>
-              Caso tenha dúvidas sobre esta política, entre em contato pelo email:
+              If you have questions about this policy, contact us via email:
               lucasReserva571@gmail.com
             </Text>
 
             <Text style={styles.footer}>
-              Agradecemos por confiar em nossa aplicação! Boas receitas e bom apetite!
+              Thank you for trusting our application! Happy cooking and enjoy your meal!
             </Text>
           </Card.Content>
         </Card>

@@ -6,8 +6,8 @@ import { RootStackParamList } from "../../Routes";
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import LinearGradient from "react-native-linear-gradient";
 import Toast from 'react-native-toast-message'; // Biblioteca para feedback visual
-import { auth,db } from "../../Services/fireBaseConfig";
-import { collection,addDoc } from "firebase/firestore";
+import { auth, db } from "../../Services/fireBaseConfig";
+import { collection, addDoc } from "firebase/firestore";
 
 type RecipeDetailsProps = NativeStackScreenProps<RootStackParamList, "RecipeDetails">;
 
@@ -29,7 +29,7 @@ const RecipeDetails = ({ route, navigation }: RecipeDetailsProps) => {
 
   const fetchRecipeDetails = async () => {
     try {
-      const apiKey = ""; // tirei a chave da api por segurança
+      const apiKey = "7f5896bcc0644617a509b22ffc142782"; // tirei a chave da api por segurança
       const url = `https://api.spoonacular.com/recipes/${recipeId}/information?apiKey=${apiKey}&includeNutrition=true`;
 
       const response = await fetch(url);
@@ -55,7 +55,7 @@ const RecipeDetails = ({ route, navigation }: RecipeDetailsProps) => {
   const handleFavorite = async () => {
     const a = auth;
     const user = a.currentUser;
-  
+
     if (!user) {
       Toast.show({
         type: 'error',
@@ -64,7 +64,7 @@ const RecipeDetails = ({ route, navigation }: RecipeDetailsProps) => {
       });
       return;
     }
-  
+
     const data = db;
     const favoriteData = {
       userId: user.uid,
@@ -72,19 +72,19 @@ const RecipeDetails = ({ route, navigation }: RecipeDetailsProps) => {
       image: recipeData?.image,
       addedAt: new Date().toISOString(),
     };
-  
+
     try {
       const docRef = await addDoc(collection(data, "favorites"), favoriteData);
       console.log("Receita salva com ID:", docRef.id);
-  
+
       Toast.show({
         type: 'success',
-        text1: 'Receita adicionada aos favoritos!',
-        text2: 'Você pode acessá-la na sua lista de favoritos.',
+        text1: 'Recipe added to favorites!',
+        text2: 'You can access it in your favorites list.',
       });
     } catch (error) {
       console.error("Erro ao salvar nos favoritos:", error);
-  
+
       Toast.show({
         type: 'error',
         text1: 'Erro!',
@@ -96,7 +96,7 @@ const RecipeDetails = ({ route, navigation }: RecipeDetailsProps) => {
     return (
       <View style={styles.loader}>
         <ActivityIndicator size="large" color="#FF7043" />
-        <Text style={styles.loadingText}>Carregando receita...</Text>
+        <Text style={styles.loadingText}>Loading recipe...</Text>
       </View>
     );
   }
@@ -114,7 +114,7 @@ const RecipeDetails = ({ route, navigation }: RecipeDetailsProps) => {
       <LinearGradient colors={["#FF7043", "#FF5722"]} style={styles.headerGradient}>
         <Appbar.Header style={styles.header}>
           <Appbar.BackAction onPress={() => navigation.goBack()} />
-          <Appbar.Content title="Detalhes da Receita" titleStyle={styles.headerTitle} />
+          <Appbar.Content title="Recipe Details" titleStyle={styles.headerTitle} />
         </Appbar.Header>
       </LinearGradient>
 
@@ -127,17 +127,17 @@ const RecipeDetails = ({ route, navigation }: RecipeDetailsProps) => {
             </Text>
             <View style={styles.details}>
               <Chip icon="timer" style={styles.chip}>
-                {recipeData?.readyInMinutes} minutos
+                {recipeData?.readyInMinutes} minutes
               </Chip>
               <Chip icon="silverware-fork-knife" style={styles.chip}>
-                {recipeData?.servings} porções
+                {recipeData?.servings} portions
               </Chip>
             </View>
           </Card.Content>
         </Card>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Ingredientes</Text>
+          <Text style={styles.sectionTitle}>Ingredients</Text>
           {recipeData?.extendedIngredients?.map((ingredient) => (
             <View key={ingredient.id} style={styles.ingredientContainer}>
               <Icon name="food-fork-drink" color="black" size={20} style={styles.icon} />
@@ -147,12 +147,12 @@ const RecipeDetails = ({ route, navigation }: RecipeDetailsProps) => {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Modo de Preparo</Text>
+          <Text style={styles.sectionTitle}>Preparation method</Text>
           {recipeData?.analyzedInstructions?.[0]?.steps?.map((step) => (
             <Text key={step.number} style={styles.stepText}>
               {step.number}. {step.step}
             </Text>
-          )) || <Text style={styles.noStepsText}>Modo de preparo não disponível.</Text>}
+          )) || <Text style={styles.noStepsText}>Preparation method not available.</Text>}
         </View>
 
         <Button
@@ -162,7 +162,8 @@ const RecipeDetails = ({ route, navigation }: RecipeDetailsProps) => {
           style={styles.button}
           onPress={handleFavorite}
         >
-          Favoritar Receita
+
+          Favorite Recipe
         </Button>
       </ScrollView>
       <Toast />
@@ -251,15 +252,15 @@ const styles = StyleSheet.create({
     color: "#333",
     marginVertical: 3,
     paddingLeft: 10,
-    fontWeight:'bold',
-    letterSpacing:0.3
+    fontWeight: 'bold',
+    letterSpacing: 0.3
   },
   stepText: {
     fontSize: 16,
     color: "#333",
     marginVertical: 5,
     lineHeight: 22,
-    fontWeight:'bold'
+    fontWeight: 'bold'
   },
   noStepsText: {
     fontSize: 16,

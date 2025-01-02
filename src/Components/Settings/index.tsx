@@ -106,8 +106,8 @@ const Settings = ({ navigation }: SettingsProps) => {
                     label={(userName?.[0] || "U").toUpperCase()} // Usa a primeira letra do nome do usuário
                     style={styles.avatar}
                 />
-                <Text style={styles.name}>{userName || "Usuário Desconhecido"}</Text>
-                <Text style={styles.email}>{user?.email || "Email não disponível"}</Text>
+                <Text style={styles.name}>{userName || "unknown user"}</Text>
+                <Text style={styles.email}>{user?.email || "Email not available"}</Text>
             </View>
 
             <Divider style={styles.divider} />
@@ -116,19 +116,19 @@ const Settings = ({ navigation }: SettingsProps) => {
                 <List.Subheader style={styles.subheader}>Informações da Conta</List.Subheader>
                 <List.Item
                     style={styles.listItem}
-                    title="Nome"
-                    description={userName || "Não definido"}
+                    title="Name"
+                    description={userName || "Not available"}
                     left={() => <List.Icon icon="account" color={COLORS.primary} />}
                 />
                 <List.Item
                     style={styles.listItem}
                     title="Email"
-                    description={user?.email || "Não disponível"}
+                    description={user?.email || "Not available"}
                     left={() => <List.Icon icon="email" color={COLORS.primary} />}
                 />
                 <List.Item
                     style={styles.listItem}
-                    title="Alterar Senha"
+                    title="Change Password"
                     left={() => <List.Icon icon="lock-reset" color={COLORS.primary} />}
                     onPress={handlePasswordReset}
                 />
@@ -140,7 +140,7 @@ const Settings = ({ navigation }: SettingsProps) => {
                 <List.Subheader style={styles.subheader}>Configurações</List.Subheader>
                 <List.Item
                     style={styles.listItem}
-                    title="Política de Privacidade"
+                    title="Privacy Policy"
                     left={() => <List.Icon icon="shield-lock-outline" color={COLORS.primary} />}
                     onPress={() => navigation.navigate('PrivacyPolitic')}
                 />
@@ -161,7 +161,7 @@ const Settings = ({ navigation }: SettingsProps) => {
                 style={styles.logoutButton}
                 onPress={() => navigation.goBack()}
             >
-                Voltar
+             Go back
             </Button>
         </ScrollView>
     );

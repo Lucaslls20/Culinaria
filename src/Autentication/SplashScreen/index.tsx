@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useCallback } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
 import * as Animatable from 'react-native-animatable';
@@ -14,34 +14,29 @@ type SplashScreenNavigationProps = NativeStackNavigationProp<RootStackParamList>
 const SplashScreen: React.FC = () => {
   const navigation = useNavigation<SplashScreenNavigationProps>();
 
-  useEffect(() => {
-    // Definir um timeout de 5 segundos
-    const timeout = setTimeout(() => {
-      // Verificar o estado de autenticação do usuário
-      const unsubscribe = onAuthStateChanged(auth, (user) => {
-        if (user) {
-          // Usuário autenticado, redirecionar para Home
-          navigation.navigate('Tabs');
-        } else {
-          // Usuário não autenticado, redirecionar para Welcome, sendo que o usuario não irá conseguir voltar para
-          //SplashScreen
-          navigation.dispatch(
-            CommonActions.reset({
-              index: 0,
-              routes: [{ name: 'Welcome' }], // Define apenas a tela Welcome no stack
-            })
-          );
-        }
-      });
+  const checkAuth = useCallback(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        navigation.navigate('Tabs');
+      } else {
+        navigation.dispatch(
+          CommonActions.reset({
+            index: 0,
+            routes: [{ name: 'Welcome' }],
+          })
+        );
+      }
+    });
 
-      // Limpar o listener ao desmontar o componente
-      return () => unsubscribe();
-    }, 5000);
-
-    // Limpar o timeout ao desmontar o componente
-    return () => clearTimeout(timeout);
+    return unsubscribe;
   }, [navigation]);
 
+  useEffect(() => {
+    const unsubscribe = checkAuth();
+    return () => unsubscribe();
+  }, [checkAuth]);
+
+  
   return (
     <View style={styles.container}>
       {/* Título do App com animação */}
@@ -51,7 +46,7 @@ const SplashScreen: React.FC = () => {
 
       {/* Subtítulo com animação */}
       <Animatable.Text animation="fadeIn" delay={1000} duration={2000} style={styles.subtitle}>
-        Deliciosas receitas e dicas de culinária
+        Delicious recipes and cooking tips
       </Animatable.Text>
 
       {/* Indicador de carregamento */}
@@ -64,7 +59,7 @@ const SplashScreen: React.FC = () => {
 
       {/* Mensagem no rodapé com animação */}
       <Animatable.Text animation="fadeInUp" delay={2000} duration={2000} style={styles.footerText}>
-        Carregando as melhores receitas para você...
+        Loading the best recipes for you...
       </Animatable.Text>
     </View>
   );

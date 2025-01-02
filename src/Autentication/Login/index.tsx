@@ -1,47 +1,52 @@
-import React, { useState } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import {
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
-  Alert,
   ActivityIndicator,
 } from "react-native";
 import { Snackbar } from "react-native-paper";
 import * as Animatable from "react-native-animatable";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
-import { RootStackParamList } from "../../Routes";
-import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import { useNavigation } from "@react-navigation/native";
 import { auth } from "../../Services/fireBaseConfig";
 import { signInWithEmailAndPassword } from "firebase/auth";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { RootStackParamList } from "../../Routes";
 
 type LoginScreenNavigatorProps = NativeStackNavigationProp<RootStackParamList>;
 
-export default function Login() {
+ const Login = React.memo(() => {
   const navigation = useNavigation<LoginScreenNavigatorProps>();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [snackbarVisible, setSnackbarVisible] = useState(false);
-  const [snackbarMessage, setSnackbarMessage] = useState("");
-  const [snackbarColor, setSnackbarColor] = useState("#4CAF50");
-  const [isLoading, setIsLoading] = useState(false); // Estado de carregamento
+  const [isVisible, setIsVisible] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [snackbar, setSnackbar] = useState({
+    visible: false,
+    message: "",
+    color: "#4CAF50",
+  });
 
-  const showSnackbar = (message: string, color: string) => {
-    setSnackbarMessage(message);
-    setSnackbarColor(color);
-    setSnackbarVisible(true);
-  };
+  const togglePasswordVisibility = useCallback(() => {
+    setIsVisible((prev) => !prev);
+  }, []);
 
-  const handleLogin = async () => {
+  const showSnackbar = useCallback((message: string, color: string) => {
+    setSnackbar({ visible: true, message, color });
+  }, []);
+
+  const handleLogin = useCallback(async () => {
     if (!email || !password) {
-      showSnackbar("Preencha todos os campos!", "#FF5252");
+      showSnackbar("Fill in all fields!", "#FF5252");
       return;
     }
 
-    setIsLoading(true); // Ativa o carregamento
+    setIsLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
       navigation.reset({
@@ -49,33 +54,40 @@ export default function Login() {
         routes: [{ name: "Tabs" }],
       });
     } catch (error: any) {
-      let errorMessage = "Erro ao fazer login.";
-      if (error.code === "auth/user-not-found") {
-        errorMessage = "Usuário não encontrado.";
-      } else if (error.code === "auth/wrong-password") {
-        errorMessage = "Senha incorreta.";
-      }
+      const errorMessage =
+        error.code === "auth/user-not-found"
+          ? "User not found"
+          : error.code === "auth/wrong-password"
+          ? "Incorrect password."
+          : "Error when logging in";
       showSnackbar(errorMessage, "#FF5252");
     } finally {
-      setIsLoading(false); // Desativa o carregamento
+      setIsLoading(false);
     }
-  };
+  }, [email, password, navigation, showSnackbar]);
+
+  const snackbarProps = useMemo(
+    () => ({
+      visible: snackbar.visible,
+      onDismiss: () => setSnackbar((prev) => ({ ...prev, visible: false })),
+      duration: 3000,
+      style: { backgroundColor: snackbar.color },
+    }),
+    [snackbar]
+  );
 
   return (
     <View style={styles.container}>
-      {/* Header com animação */}
       <Animatable.View animation="fadeInLeft" delay={500} style={styles.containerHeader}>
-        <Text style={styles.message}>Bem-vindo(a)!</Text>
+        <Text style={styles.message}>Welcome!</Text>
       </Animatable.View>
 
-      {/* Formulário com animação */}
       <Animatable.View animation="fadeInUp" style={styles.containerForm}>
-        {/* Campo de Email */}
         <Text style={styles.title}>Email</Text>
         <View style={styles.inputContainer}>
           <Icon name="email-outline" size={20} color="#FF7043" />
           <TextInput
-            placeholder="Digite seu email..."
+            placeholder="Enter your email..."
             style={styles.input}
             placeholderTextColor="#666"
             keyboardType="email-address"
@@ -84,62 +96,54 @@ export default function Login() {
           />
         </View>
 
-        {/* Campo de Senha */}
-        <Text style={styles.title}>Senha</Text>
+        <Text style={styles.title}>Password</Text>
         <View style={styles.inputContainer}>
           <Icon name="lock-outline" size={20} color="#FF7043" />
           <TextInput
-            placeholder="Digite sua senha..."
+            placeholder="Enter your password"
             style={styles.input}
             placeholderTextColor="#666"
-            secureTextEntry
+            secureTextEntry={!isVisible}
             value={password}
             onChangeText={setPassword}
           />
+          <TouchableOpacity onPress={togglePasswordVisibility}>
+            <MaterialIcons
+              name={isVisible ? "visibility" : "visibility-off"}
+              size={20}
+              color="#FF7043"
+            />
+          </TouchableOpacity>
         </View>
 
-        {/* Botão de Login com loading */}
         <Animatable.View animation="pulse" iterationCount="infinite">
           <TouchableOpacity
             style={[styles.button, isLoading && { opacity: 0.7 }]}
             onPress={handleLogin}
-            disabled={isLoading} // Desativa o botão enquanto carrega
+            disabled={isLoading}
           >
             {isLoading ? (
               <ActivityIndicator size="small" color="#FFF" />
             ) : (
-              <Text style={styles.buttonText}>Acessar</Text>
+              <Text style={styles.buttonText}>Access</Text>
             )}
           </TouchableOpacity>
         </Animatable.View>
 
-        {/* Botão de Cadastro */}
         <TouchableOpacity
           style={styles.buttonRegister}
           onPress={() => navigation.navigate("Register")}
         >
           <Text style={styles.registerButtonText}>
-            Não possui conta? <Text style={styles.registerButtonHighlight}>Cadastre-se</Text>
+            Don't have an account? <Text style={styles.registerButtonHighlight}>Register</Text>
           </Text>
         </TouchableOpacity>
       </Animatable.View>
 
-      {/* Snackbar para mensagens */}
-      <Snackbar
-        visible={snackbarVisible}
-        onDismiss={() => setSnackbarVisible(false)}
-        duration={3000}
-        action={{
-          label: "OK",
-          onPress: () => setSnackbarVisible(false),
-        }}
-        style={{ backgroundColor: snackbarColor }}
-      >
-        {snackbarMessage}
-      </Snackbar>
+      <Snackbar {...snackbarProps}>{snackbar.message}</Snackbar>
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: {
@@ -215,3 +219,5 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
 });
+
+export default Login

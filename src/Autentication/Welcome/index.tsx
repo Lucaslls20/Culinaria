@@ -25,14 +25,14 @@ export default function Welcome() {
 
       <Animatable.View style={styles.containerForm} animation="fadeInUp" delay={600}>
         <Text style={styles.title}>
-          Melhore e se desenvolva cada dia mais na cozinha!
+          Improve and develop more every day in the kitchen!
         </Text>
-        <Text style={styles.text}>Faça Login para começar a aprender receitas novas!</Text>
+        <Text style={styles.text}>Log in to start learning new recipes!</Text>
         <TouchableOpacity
           style={styles.button}
           onPress={() => navigation.navigate("Login")}
         >
-          <Text style={styles.butonText}>Acessar</Text>
+          <Text style={styles.butonText}>Access</Text>
         </TouchableOpacity>
       </Animatable.View>
     </View>

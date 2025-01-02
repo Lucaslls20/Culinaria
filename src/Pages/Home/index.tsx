@@ -1,17 +1,21 @@
-import React, { useEffect, useState } from 'react';
-import { View, Image, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
+import {
+  View,
+  Image,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  ActivityIndicator,
+} from 'react-native';
 import { Text, Card, Appbar, Button, Portal, Modal, Chip, Provider, Searchbar } from 'react-native-paper';
 import LinearGradient from 'react-native-linear-gradient';
 import axios from 'axios';
 import * as Animatable from 'react-native-animatable';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-//import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from '../../Routes';
 
-
-
-const API_KEY = '' // tirei a chave da api por segurança
+const API_KEY = '7f5896bcc0644617a509b22ffc142782'; // Substitua pela sua chave
 
 type HomeProps = {
   navigation: NativeStackNavigationProp<RootStackParamList, "Tabs">;
@@ -26,7 +30,6 @@ interface Recipe {
 }
 
 const Home = ({ navigation }: HomeProps) => {
-
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [filteredRecipes, setFilteredRecipes] = useState<Recipe[]>([]);
   const [visible, setVisible] = useState(false);
@@ -36,88 +39,69 @@ const Home = ({ navigation }: HomeProps) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [loadingMore, setLoadingMore] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [hasMoreResults, setHasMoreResults] = useState(true);
 
+  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  {filteredRecipes.length === 0 && !loading && (
-    <View style={styles.emptyContainer}>
-      <Text style={styles.emptyText}>Nenhuma receita encontrada. Tente novamente.</Text>
-    </View>
-  )}
+  const fetchRecipes = useCallback(
+    async (query: string = '', page = 1, cuisine: string = '') => {
+      if (page === 1) setLoading(true);
+      else setLoadingMore(true);
   
-
-  const fetchRecipes = async (page = 1) => {
-    if (page === 1) setLoading(true);
-    else setLoadingMore(true);
-
-    try {
-      const response = await axios.get(
-        `https://api.spoonacular.com/recipes/complexSearch?apiKey=${API_KEY}&number=10&offset=${(page - 1) * 10}`
-      );
-      const newRecipes = response.data.results.map((recipe: any) => ({
-        id: recipe.id,
-        title: recipe.title,
-        image: recipe.image,
-        readyInMinutes: recipe.readyInMinutes || 0,
-        servings: recipe.servings || 0,
-      }));
-
-      if (page === 1) {
-        setRecipes(newRecipes);
-        setFilteredRecipes(newRecipes);
-      } else {
-        setRecipes((prevRecipes) => [...prevRecipes, ...newRecipes]);
-        setFilteredRecipes((prevRecipes) => [...prevRecipes, ...newRecipes]);
+      try {
+        const response = await axios.get(
+          `https://api.spoonacular.com/recipes/complexSearch?apiKey=${API_KEY}&query=${query}&number=10&offset=${(page - 1) * 10}${
+            cuisine ? `&cuisine=${cuisine}` : ''
+          }`
+        );
+        const newRecipes = response.data.results.map((recipe: any) => ({
+          id: recipe.id,
+          title: recipe.title,
+          image: recipe.image,
+          readyInMinutes: recipe.readyInMinutes || 0,
+          servings: recipe.servings || 0,
+        }));
+  
+        if (page === 1) {
+          setRecipes(newRecipes);
+          setFilteredRecipes(newRecipes);
+          setHasMoreResults(newRecipes.length > 0);
+        } else {
+          setRecipes((prevRecipes) => [...prevRecipes, ...newRecipes]);
+          setFilteredRecipes((prevRecipes) => [...prevRecipes, ...newRecipes]);
+          setHasMoreResults(newRecipes.length > 0);
+        }
+      } catch (error) {
+        console.error('Erro ao buscar receitas:', error);
+      } finally {
+        setLoading(false);
+        setLoadingMore(false);
       }
-    } catch (error) {
-      console.error('Erro ao buscar receitas:', error);
-    } finally {
-      setLoading(false);
-      setLoadingMore(false);
-    }
-  };
-
-  const handleFilterByCuisine = async (cuisine: string) => {
-    setSelectedCuisine(cuisine);
-    if (cuisine === '') {
-      setFilteredRecipes(recipes);
-      return;
-    }
-
-    try {
-      const response = await axios.get(
-        `https://api.spoonacular.com/recipes/complexSearch?apiKey=${API_KEY}&cuisine=${cuisine}&number=10`
-      );
-
-      const filtered = response.data.results.map((recipe: any) => ({
-        id: recipe.id,
-        title: recipe.title,
-        image: recipe.image,
-        readyInMinutes: recipe.readyInMinutes || 0,
-        servings: recipe.servings || 0,
-      }));
-
-      setFilteredRecipes(filtered);
-    } catch (error) {
-      console.error('Erro ao filtrar receitas por tipo de comida:', error);
-    }
-    setVisible(false);
-  };
-
-  const handleSearch = (query: string) => {
+    },
+    []
+  );
+  
+  const handleSearch = useCallback((query: string) => {
     setSearchQuery(query);
-    const filtered = recipes.filter((recipe) =>
-      recipe.title.toLowerCase().includes(query.toLowerCase())
-    );
-    setFilteredRecipes(filtered);
-  };
 
-  const loadMoreRecipes = () => {
-    if (!loadingMore) {
+    if (debounceTimeoutRef.current) clearTimeout(debounceTimeoutRef.current);
+
+    debounceTimeoutRef.current = setTimeout(() => {
+      if (query.trim()) {
+        fetchRecipes(query.trim());
+      } else {
+        fetchRecipes(); // Retorna à lista padrão se o campo de busca for limpo
+      }
+    }, 500);
+  }, [fetchRecipes]);
+
+  const loadMoreRecipes = useCallback(() => {
+    if (!loadingMore && hasMoreResults) {
       const nextPage = currentPage + 1;
       setCurrentPage(nextPage);
-      fetchRecipes(nextPage);
+      fetchRecipes(searchQuery, nextPage);
     }
-  };
+  }, [currentPage, fetchRecipes, hasMoreResults, loadingMore, searchQuery]);
 
   const renderRecipe = ({ item }: { item: Recipe }) => (
     <Animatable.View animation="fadeIn" duration={500} style={styles.cardWrapper}>
@@ -127,7 +111,6 @@ const Home = ({ navigation }: HomeProps) => {
         </View>
         <Card.Content>
           <Text variant="titleLarge" style={styles.recipeTitle}>{item.title}</Text>
-          {/*} <Text style={styles.detailsText}>⏱️ {item.readyInMinutes} minutos | 🍽️ {item.servings} porções</Text> */}
         </Card.Content>
         <View style={styles.buttonContainer}>
           <Button
@@ -135,10 +118,10 @@ const Home = ({ navigation }: HomeProps) => {
             icon="eye-outline"
             textColor="#FFF"
             style={styles.cardButton}
-            labelStyle={{ fontWeight: 'bold' }} // Destacar o texto
-            buttonColor="#FF5722" // Fundo sólido combinando com o tema
+            labelStyle={{ fontWeight: 'bold' }}
+            buttonColor="#FF5722"
             onPress={() => navigation.navigate("RecipeDetails", { recipeId: item.id })}>
-            Ver receita
+            See Recipe
           </Button>
         </View>
       </Card>
@@ -155,7 +138,7 @@ const Home = ({ navigation }: HomeProps) => {
         <LinearGradient colors={['#FF7043', '#FF5722']} style={styles.headerGradient}>
           <Appbar.Header style={styles.header}>
             <Image source={{ uri: 'https://img.icons8.com/ios/50/ffffff/cooking-book.png' }} style={styles.headerIcon} accessibilityLabel="Ícone de livro de receitas" />
-            <Appbar.Content title="Receitas" titleStyle={styles.headerTitle} />
+            <Appbar.Content title="Recipes" titleStyle={styles.headerTitle} />
             <Icon
               name="food"
               size={30}
@@ -166,7 +149,7 @@ const Home = ({ navigation }: HomeProps) => {
             />
           </Appbar.Header>
           <Searchbar
-            placeholder="Buscar receitas"
+            placeholder="Search recipes..."
             placeholderTextColor="white"
             iconColor="white"
             onChangeText={handleSearch}
@@ -180,15 +163,10 @@ const Home = ({ navigation }: HomeProps) => {
         {loading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#FF7043" />
-            <Text style={styles.loadingText}>Buscando as melhores receitas...</Text>
+            <Text style={styles.loadingText}>Looking for recipes, wait a minute...</Text>
           </View>
         ) : (
           <FlatList
-          getItemLayout={(data, index) => ({
-            length: 200, // Altura do item
-            offset: 200 * index,
-            index,
-          })}
             data={filteredRecipes}
             renderItem={renderRecipe}
             keyExtractor={(item) => item.id.toString()}
@@ -208,24 +186,28 @@ const Home = ({ navigation }: HomeProps) => {
         <Portal>
           <Modal visible={visible} onDismiss={() => setVisible(false)} contentContainerStyle={styles.modal}>
             <Animatable.View animation="slideInUp" duration={400} style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Selecione um Tipo de Comida</Text>
+              <Text style={styles.modalTitle}>Select a Cuisine</Text>
               <View style={styles.chipContainer}>
-                <Chip style={styles.chip} selected={selectedCuisine === ''} onPress={() => handleFilterByCuisine('')}>
-                  Todos
+                <Chip style={styles.chip} selected={selectedCuisine === ''} onPress={() => setSelectedCuisine('')}>
+                  All
                 </Chip>
                 {cuisines.map((cuisine, index) => (
                   <Chip
-                    key={index}
-                    style={styles.chip}
-                    selected={selectedCuisine === cuisine}
-                    onPress={() => handleFilterByCuisine(cuisine)}
+                  key={index}
+                  style={styles.chip}
+                  selected={selectedCuisine === cuisine}
+                  onPress={() => {
+                    setSelectedCuisine(cuisine);
+                    fetchRecipes('', 1, cuisine); // Busca receitas para a culinária selecionada
+                    setVisible(false); // Fecha o modal
+                  }}
                   >
                     {cuisine}
                   </Chip>
                 ))}
               </View>
               <Button mode="text" onPress={() => setVisible(false)}>
-                Fechar
+                Close
               </Button>
             </Animatable.View>
           </Modal>
@@ -234,6 +216,7 @@ const Home = ({ navigation }: HomeProps) => {
     </Provider>
   );
 };
+
 
 const styles = StyleSheet.create({
   container: {

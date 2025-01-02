@@ -34,7 +34,7 @@ const COLORS = {
     placeholder: "#FFAB91",
 };
 
-const API_KEY = "" // tirei a chave da api por segurança
+const API_KEY = "7f5896bcc0644617a509b22ffc142782" // tirei a chave da api por segurança
 
 interface Recipe {
     id: number;
@@ -161,7 +161,7 @@ const Search = ({ navigation }: SearchProps) => {
 
     const renderNoResults = () => (
         <View style={styles.noResultsContainer}>
-            <Text style={styles.noResultsText}>Nenhum resultado encontrado.</Text>
+            <Text style={styles.noResultsText}>No results found.</Text>
         </View>
     );
 
@@ -174,7 +174,7 @@ const Search = ({ navigation }: SearchProps) => {
     return (
         <View style={styles.container}>
             <Searchbar
-                placeholder="Buscar receitas deliciosas..."
+                placeholder="Search for delicious recipes.."
                 placeholderTextColor={COLORS.placeholder}
                 iconColor={COLORS.white}
                 inputStyle={{ color: COLORS.white }}
@@ -185,7 +185,8 @@ const Search = ({ navigation }: SearchProps) => {
 
             {searchQuery ? (
                 <>
-                    <Text style={styles.sectionTitle}>Resultados da busca</Text>
+                    <Text style={styles.sectionTitle}>
+                    Search results</Text>
                     {loading ? (
                         <View style={styles.spinnerContainer}>
                             <Animated.View style={[styles.spinner, { transform: [{ rotate: spin }] }]} />
@@ -210,7 +211,7 @@ const Search = ({ navigation }: SearchProps) => {
                 </>
             ) : (
                 <>
-                    <Text style={styles.sectionTitle}>Pesquisas Populares</Text>
+                    <Text style={styles.sectionTitle}>Popular searches</Text>
                     <FlatList
                         data={popularSearches}
                         numColumns={2}
@@ -219,7 +220,8 @@ const Search = ({ navigation }: SearchProps) => {
                     />
 
 
-                    <Text style={styles.sectionTitle}>Últimas Receitas</Text>
+                    <Text style={styles.sectionTitle}>
+                    Latest Recipes</Text>
                     <FlatList
                         data={recentlyViewed}
                         horizontal

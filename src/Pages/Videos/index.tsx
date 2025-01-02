@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import {
   FlatList,
   StyleSheet,
@@ -13,16 +13,16 @@ import { IconButton, Button, Searchbar } from "react-native-paper";
 import { WebView } from "react-native-webview";
 import * as Animatable from "react-native-animatable";
 
-  const COLORS = {
-    primary: "#FF7043",
-    secondary: "#FFF8E1",
-    textPrimary: "#4E342E",
-    textSecondary: "#757575",
-    white: "#FFF",
-    cardBackground: "#FFE0B2",
-    shadow: "#D7CCC8",
-    placeholder: "#FFAB91",
-  };
+const COLORS = {
+  primary: "#FF7043",
+  secondary: "#FFF8E1",
+  textPrimary: "#4E342E",
+  textSecondary: "#757575",
+  white: "#FFF",
+  cardBackground: "#FFE0B2",
+  shadow: "#D7CCC8",
+  placeholder: "#FFAB91",
+};
 
 const { height } = Dimensions.get("window");
 
@@ -31,10 +31,10 @@ interface VideoData {
   title: string;
   videoUrl: string;
   channel: string;
-  duration: string; // Nova informação
+  duration: string;
 }
 
-const API_KEY = ""; // tirei a chave da api por segurança
+const API_KEY = "7f5896bcc0644617a509b22ffc142782";
 const BASE_API_URL = `https://api.spoonacular.com/food/videos/search`;
 
 const Videos: React.FC = () => {
@@ -43,15 +43,18 @@ const Videos: React.FC = () => {
   const [page, setPage] = useState(1);
   const [isFetchingMore, setIsFetchingMore] = useState(false);
   const [buttonLoading, setButtonLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState(""); 
+  const [searchTerm, setSearchTerm] = useState("");
   const [searchLoading, setSearchLoading] = useState(false);
 
-  // Função para embaralhar os vídeos
-  const shuffleArray = (array: VideoData[]) => {
-    return array.sort(() => Math.random() - 0.5);
-  };
+  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const fetchVideos = async (pageNum: number, query: string = "pasta") => {
+  const shuffleArray = useCallback((array: VideoData[]): VideoData[] => {
+    return [...array].sort(() => Math.random() - 0.5);
+  }, []);
+
+  const shuffledVideos = useMemo(() => shuffleArray(videos), [videos, shuffleArray]);
+
+  const fetchVideos = useCallback(async (pageNum: number, query: string = "pasta") => {
     try {
       const url = `${BASE_API_URL}?query=${query}&number=5&offset=${(pageNum - 1) * 5}&apiKey=${API_KEY}`;
       const response = await fetch(url);
@@ -64,15 +67,14 @@ const Videos: React.FC = () => {
           title: video.title,
           videoUrl: `https://www.youtube.com/embed/${video.youTubeId}`,
           channel: video.channel,
-          duration: video.duration, // Nova informação
+          duration: video.duration,
         }));
 
-        // Embaralha os vídeos antes de atualizar o estado
         setVideos((prevVideos) =>
           pageNum === 1 ? shuffleArray(formattedVideos) : shuffleArray([...prevVideos, ...formattedVideos])
         );
       } else {
-        Alert.alert("Nenhum vídeo encontrado", "Tente novamente mais tarde.");
+        console.log("Nenhum vídeo encontrado", "Tente novamente mais tarde.");
       }
     } catch (error) {
       console.error("Error fetching videos:", error);
@@ -83,39 +85,70 @@ const Videos: React.FC = () => {
       setButtonLoading(false);
       setSearchLoading(false);
     }
-  };
+  }, [shuffleArray]);
 
   useEffect(() => {
     fetchVideos(page);
-  }, [page]);
+  }, [page, fetchVideos]);
 
-  const handleSearch = () => {
-    setSearchLoading(true);
-    setVideos([]);
-    setPage(1);
-    fetchVideos(1, searchTerm);
-  };
+  const handleDebouncedSearch = useCallback(
+    (text: string) => {
+      setSearchTerm(text);
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+      debounceTimeoutRef.current = setTimeout(() => {
+        setSearchLoading(true);
+        setVideos([]);
+        setPage(1);
+        fetchVideos(1, text);
+      }, 500);
+    },
+    [fetchVideos]
+  );
 
-  const loadMoreVideos = () => {
+  const loadMoreVideos = useCallback(() => {
     if (!isFetchingMore) {
       setIsFetchingMore(true);
       setPage((prevPage) => prevPage + 1);
     }
-  };
+  }, [isFetchingMore]);
 
-  const reloadVideos = () => {
+  const reloadVideos = useCallback(() => {
     setLoading(true);
     setVideos([]);
     setPage(1);
     setSearchTerm("");
     fetchVideos(1);
-  };
+  }, [fetchVideos]);
+
+  const renderVideoItem = useCallback(({ item }: { item: VideoData }) => (
+    <Animatable.View animation="fadeInUp" duration={500} style={styles.videoContainer}>
+      <WebView
+        source={{ uri: item.videoUrl }}
+        style={styles.video}
+        javaScriptEnabled
+        allowsFullscreenVideo
+      />
+      <View style={styles.overlay}>
+        <Text style={styles.title}>{item.title}</Text>
+        <Text style={styles.channel}>{item.channel}</Text>
+        <Text style={styles.duration}>{item.duration}</Text>
+        <IconButton
+          icon="play-circle"
+          size={30}
+          style={styles.playIcon}
+          accessibilityLabel="Reproduzir vídeo"
+        />
+      </View>
+    </Animatable.View>
+  ), []);
 
   if (loading && !searchLoading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text style={styles.loadingText}>Carregando vídeos...</Text>
+        <Text style={styles.loadingText}>Fetch videos...</Text>
       </View>
     );
   }
@@ -123,12 +156,11 @@ const Videos: React.FC = () => {
   return (
     <View style={{ flex: 1, backgroundColor: COLORS.secondary }}>
       <Searchbar
-        placeholder="Pesquisar receitas..."
+        placeholder="Search recipes..."
         placeholderTextColor={COLORS.placeholder}
         iconColor={COLORS.white}
         value={searchTerm}
-        onChangeText={setSearchTerm}
-        onSubmitEditing={handleSearch}
+        onChangeText={handleDebouncedSearch}
         style={styles.searchBar}
         accessibilityLabel="Campo de pesquisa de receitas"
       />
@@ -136,33 +168,9 @@ const Videos: React.FC = () => {
         <ActivityIndicator size="large" color={COLORS.primary} />
       ) : (
         <FlatList
-          data={videos}
+          data={shuffledVideos}
           keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <Animatable.View
-              animation="fadeInUp"
-              duration={500}
-              style={styles.videoContainer}
-            >
-              <WebView
-                source={{ uri: item.videoUrl }}
-                style={styles.video}
-                javaScriptEnabled
-                allowsFullscreenVideo
-              />
-              <View style={styles.overlay}>
-                <Text style={styles.title}>{item.title}</Text>
-                <Text style={styles.channel}>{item.channel}</Text>
-                <Text style={styles.duration}>{item.duration}</Text>
-                <IconButton
-                  icon="play-circle"
-                  size={30}
-                  style={styles.playIcon}
-                  accessibilityLabel="Reproduzir vídeo"
-                />
-              </View>
-            </Animatable.View>
-          )}
+          renderItem={renderVideoItem}
           ListFooterComponent={
             buttonLoading ? (
               <ActivityIndicator size="small" color={COLORS.primary} />
@@ -175,9 +183,7 @@ const Videos: React.FC = () => {
                 style={styles.footerButton}
                 accessibilityLabel="Carregar mais vídeos"
               >
-                <Text style={styles.footerButtonText}>
-                  Carregar mais vídeos
-                </Text>
+                <Text style={styles.footerButtonText}>Upload more videos</Text>
               </TouchableOpacity>
             )
           }
@@ -194,11 +200,12 @@ const Videos: React.FC = () => {
         labelStyle={{ color: COLORS.white }}
         accessibilityLabel="Recarregar vídeos"
       >
-        Recarregar
+        Reload
       </Button>
     </View>
   );
 };
+
 
 const styles = StyleSheet.create({
   listContainer: {

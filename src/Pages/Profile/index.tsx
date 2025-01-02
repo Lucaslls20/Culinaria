@@ -13,7 +13,7 @@ import { Avatar, Divider, Card } from "react-native-paper";
 import LinearGradient from "react-native-linear-gradient";
 import { auth, db } from "../../Services/fireBaseConfig";
 import { logOut } from "../../Components/LogOut/function";
-import { collection, query, where, getDocs } from "firebase/firestore";
+import { collection, query, where, getDocs, getDoc, doc } from "firebase/firestore";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from '../../Routes';
 
@@ -59,16 +59,23 @@ const Profile = ({ navigation }: ProfileProps) => {
   const [loadingRecipe, setLoadingRecipe] = useState(false);
 
   useEffect(() => {
-    const currentUser = auth.currentUser;
-    if (currentUser) {
-      setUser({
-        displayName: currentUser.displayName,
-        email: currentUser.email,
-        photoURL: currentUser.photoURL,
-      });
-    }
-  }, []);
+    const fetchUserDetails = async () => {
+      const currentUser = auth.currentUser;
 
+      if (currentUser) {
+        const userDocRef = doc(db, "users", currentUser.uid);
+        const userDoc = await getDoc(userDocRef);
+
+        setUser({
+          displayName: userDoc.exists() ? userDoc.data()?.name : currentUser.displayName,
+          email: currentUser.email,
+          photoURL: currentUser.photoURL,
+        });
+      }
+    };
+
+    fetchUserDetails();
+  }, []);
   const fetchFavorites = async () => {
     const currentUser = auth.currentUser;
 
@@ -102,7 +109,7 @@ const Profile = ({ navigation }: ProfileProps) => {
     setLoadingRecipe(true);
     try {
       const response = await fetch(
-        `https://api.spoonacular.com/recipes/${id}/information?apiKey=` // completar está faltando a chave da api por segurança
+        `https://api.spoonacular.com/recipes/${id}/information?apiKey=7f5896bcc0644617a509b22ffc142782` // completar está faltando a chave da api por segurança
       );
   
       if (!response.ok) {
@@ -125,35 +132,45 @@ const Profile = ({ navigation }: ProfileProps) => {
     }
   };
 
- {/* const handleRecipePress = (recipe: Favorite) => {
-    setSelectedRecipe(recipe);
-    fetchRecipeDetails(recipe.id);
-  };
-
-  */}
+ 
+  {/* { id: "1", title: "Order History", icon: "history", onPress: () => navigation.navigate('OrderHistory') }, */}
+  // tirei o orderHistory por enquanto
 
   const menuItems = [
-    { id: "1", title: "Order History", icon: "history", onPress: () => navigation.navigate('OrderHistory') },
-    { id: "2", title: "Settings", icon: "cog", onPress: () =>navigation.navigate('Settings') },
-    { id: "3", title: "Favorites", icon: "heart", onPress: fetchFavorites },
-    { id: "4", title: "Privacy Policy", icon: "file-document", onPress:() => navigation.navigate('PrivacyPolitic') },
-    { id: "5", title: "Log out", icon: "exit-to-app", onPress: logOut },
+   
+    { id: "1", title: "Settings", icon: "cog", onPress: () =>navigation.navigate('Settings') },
+    { id: "2", title: "Favorites", icon: "heart", onPress: fetchFavorites },
+    { id: "3", title: "Privacy Policy", icon: "file-document", onPress:() => navigation.navigate('PrivacyPolitic') },
+    { id: "4", title: "Log out", icon: "exit-to-app", onPress: logOut },
   ];
 
-  const renderMenuItem = ({ item }: any) => (
-    <TouchableOpacity style={styles.menuItem} onPress={item.onPress}>
-      <View style={styles.iconContainer}>
-        <Avatar.Icon
-          size={40}
-          icon={item.icon}
-          color={COLORS.primary}
-          style={{ backgroundColor: COLORS.secondary }}
-        />
-      </View>
-      <Text style={styles.menuText}>{item.title}</Text>
-      <Text style={styles.arrow}>{">"}</Text>
-    </TouchableOpacity>
-  );
+  const keyExtractor = (item: { id: string }) => `menu-item-${item.id}`;
+
+  {favorites.length === 0 && !loadingFavorites && (
+    <Text style={{ textAlign: "center", marginTop: 20 }}>
+        Nenhum favorito encontrado.
+    </Text>
+)}
+
+const renderMenuItem = ({ item }: { item: typeof menuItems[0] }) => (
+  <TouchableOpacity
+    style={styles.menuItem}
+    onPress={item.onPress}
+    activeOpacity={0.6}
+  >
+    <View style={styles.iconContainer}>
+      <Avatar.Icon
+        size={40}
+        icon={item.icon}
+        color={COLORS.primary}
+        style={{ backgroundColor: COLORS.secondary }}
+      />
+    </View>
+    <Text style={styles.menuText}>{item.title}</Text>
+    <Text style={styles.arrow}>{">"}</Text>
+  </TouchableOpacity>
+);
+
 
   return (
     <>
@@ -166,7 +183,7 @@ const Profile = ({ navigation }: ProfileProps) => {
             }}
             style={{ backgroundColor: COLORS.cardBackground }}
           />
-          <Text style={styles.name}>{user.displayName || "Usuário"}</Text>
+          <Text style={styles.name}>{user.displayName || "User"}</Text>
           <Text style={styles.email}>{user.email || "email@exemplo.com"}</Text>
         </View>
 
@@ -175,14 +192,16 @@ const Profile = ({ navigation }: ProfileProps) => {
         <FlatList
           data={menuItems}
           renderItem={renderMenuItem}
-          keyExtractor={(item) => item.id}
+          keyExtractor={keyExtractor}
+          initialNumToRender={4}
           contentContainerStyle={styles.listContainer}
-        />
+      />
+
       </LinearGradient>
 
       <Modal visible={isFavoritesVisible} animationType="slide" onRequestClose={() => setFavoritesVisible(false)}>
         <View style={styles.modalContainer}>
-          <Text style={styles.modalTitle}>Favoritos</Text>
+          <Text style={styles.modalTitle}>Favorites</Text>
           {loadingFavorites ? (
             <ActivityIndicator size="large" color={COLORS.primary} />
           ) : (
@@ -202,36 +221,11 @@ const Profile = ({ navigation }: ProfileProps) => {
             />
           )}
           <TouchableOpacity style={styles.closeButton} onPress={() => setFavoritesVisible(false)}>
-            <Text style={styles.closeButtonText}>Fechar</Text>
+            <Text style={styles.closeButtonText}>Close</Text>
           </TouchableOpacity>
         </View>
       </Modal>
 
-    {/*}  <Modal visible={isRecipeModalVisible} animationType="slide" onRequestClose={() => setRecipeModalVisible(false)}>
-        <View style={styles.modalContainer}>
-          {loadingRecipe ? (
-            <ActivityIndicator size="large" color={COLORS.primary} />
-          ) : recipeDetails ? (
-            <View>
-              <Text style={styles.modalTitle}>{recipeDetails.title}</Text>
-              <Text style={styles.modalContent}>Servings: {recipeDetails.servings}</Text>
-              <Text style={styles.modalContent}>Ready in: {recipeDetails.readyInMinutes} minutes</Text>
-              <Text style={styles.modalContent}>Ingredients:</Text>
-              {recipeDetails.extendedIngredients?.map((ingredient: any) => (
-                <Text key={ingredient.id} style={styles.modalContent}>
-                  - {ingredient.original}
-                </Text>
-              ))}
-            </View>
-          ) : (
-            <Text style={styles.modalContent}>Detalhes da receita não disponíveis.</Text>
-          )}
-          <TouchableOpacity style={styles.closeButton} onPress={() => setRecipeModalVisible(false)}>
-            <Text style={styles.closeButtonText}>Fechar</Text>
-          </TouchableOpacity>
-        </View>
-      </Modal>
-      */}
     </>
   );
 };

@@ -1,14 +1,23 @@
-import React, { useState } from "react";
-import { StyleSheet, Text, TextInput, TouchableOpacity, View, ActivityIndicator } from "react-native";
+import React, { useState, useCallback, memo } from "react";
+import {
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+  ActivityIndicator,
+} from "react-native";
 import * as Animatable from "react-native-animatable";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
+import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import { Snackbar } from "react-native-paper";
-import { RootStackParamList } from "../../Routes";
-import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useNavigation } from "@react-navigation/native";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
 import { auth, db } from "../../Services/fireBaseConfig";
+import { RootStackParamList } from "../../Routes";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+
 
 const COLORS = {
   primary: "#FF7043",
@@ -20,10 +29,74 @@ const COLORS = {
   placeholder: "#666",
 };
 
-type RegisterScreenNavigatorProps = NativeStackNavigationProp<RootStackParamList>;
+type RegisterScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, "Register">
+
+
+
+// Tipos
+type SnackbarProps = {
+  visible: boolean;
+  message: string;
+  color: string;
+  onDismiss: () => void;
+};
+
+type InputFieldProps = {
+  label: string;
+  icon: string;
+  value: string;
+  onChangeText: (text: string) => void;
+  placeholder: string;
+  secureTextEntry?: boolean;
+  keyboardType?: "default" | "email-address";
+  onToggleVisibility?: () => void;
+  isVisible?: boolean;
+};
+
+// Componente Snackbar
+const CustomSnackbar = memo(({ visible, message, color, onDismiss }: SnackbarProps) => (
+  <Snackbar
+    visible={visible}
+    onDismiss={onDismiss}
+    duration={2000}
+    style={{ backgroundColor: color }}
+    action={{
+      label: "OK",
+      onPress: onDismiss,
+    }}
+  >
+    {message}
+  </Snackbar>
+));
+
+// Componente InputField
+const InputField = memo(
+  ({ label, icon, onToggleVisibility, isVisible, ...props }: InputFieldProps) => (
+    <>
+      <Text style={styles.title}>{label}</Text>
+      <View style={styles.inputContainer}>
+        <Icon name={icon} size={20} color={COLORS.primary} />
+        <TextInput
+          style={styles.input}
+          placeholderTextColor={COLORS.placeholder}
+          {...props}
+        />
+        {onToggleVisibility && (
+          <TouchableOpacity onPress={onToggleVisibility}>
+            <MaterialIcons
+              name={isVisible ? "visibility" : "visibility-off"}
+              size={20}
+              color={COLORS.primary}
+            />
+          </TouchableOpacity>
+        )}
+      </View>
+    </>
+  )
+);
 
 export default function Register() {
-  const navigation = useNavigation<RegisterScreenNavigatorProps>();
+  const navigation = useNavigation<RegisterScreenNavigationProp>();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -31,123 +104,112 @@ export default function Register() {
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [snackbarColor, setSnackbarColor] = useState(COLORS.success);
   const [loading, setLoading] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
 
-  const showSnackbar = (message: string, color: string) => {
+  const showPassword = useCallback(() => setIsVisible((prev) => !prev), []);
+  const showSnackbar = useCallback((message: string, color: string) => {
     setSnackbarMessage(message);
     setSnackbarColor(color);
     setSnackbarVisible(true);
-  };
+  }, []);
 
-  const handleRegister = async () => {
+  const handleRegister = useCallback(async () => {
     if (!name || !email || !password) {
-      showSnackbar("Preencha todos os campos!", COLORS.error);
+      showSnackbar("Fill in all fields!", COLORS.error);
       return;
     }
-
+  
     if (password.length < 6) {
-      showSnackbar("A senha deve ter pelo menos 6 caracteres!", COLORS.error);
+      showSnackbar("Password must be at least 6 characters long!", COLORS.error);
       return;
     }
-
-    setLoading(true); // Mostra o indicador de carregamento
+  
+    setLoading(true);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
-
+  
       await setDoc(doc(db, "users", user.uid), {
         name,
         email,
         createdAt: new Date(),
       });
-
-      showSnackbar("Cadastro realizado com sucesso!", COLORS.success);
+  
+      showSnackbar("Registration completed successfully!", COLORS.success);
+  
       navigation.reset({
         index: 0,
-        routes: [{ name: "Tabs" }],
+        routes: [{ name: "Tabs" as keyof RootStackParamList }], // Adicionado as keyof
       });
     } catch (error: any) {
-      let errorMessage = "Erro ao registrar. Tente novamente!";
-      if (error.code === "auth/email-already-in-use") {
-        errorMessage = "Email já está em uso!";
-      } else if (error.code === "auth/weak-password") {
-        errorMessage = "A senha deve ter pelo menos 6 caracteres!";
-      }
+      const errorMessage =
+        error.code === "auth/email-already-in-use"
+          ? "Email already in use!"
+          : error.code === "auth/weak-password"
+          ? "Password must be at least 6 characters long!"
+          : "Error registering. Try again!";
       showSnackbar(errorMessage, COLORS.error);
     } finally {
-      setLoading(false); // Finaliza o indicador de carregamento
+      setLoading(false);
     }
-  };
+  }, [name, email, password, navigation, showSnackbar]);
 
   return (
     <View style={styles.container}>
       <Animatable.View animation="fadeInLeft" delay={500} style={styles.containerHeader}>
-        <Text style={styles.message}>Crie sua conta!</Text>
+        <Text style={styles.message}>Create your account!</Text>
       </Animatable.View>
 
       <Animatable.View animation="fadeInUp" style={styles.containerForm}>
-        <Text style={styles.title}>Nome</Text>
-        <View style={styles.inputContainer}>
-          <Icon name="account-outline" size={20} color={COLORS.primary} />
-          <TextInput
-            placeholder="Digite seu nome..."
-            style={styles.input}
-            placeholderTextColor={COLORS.placeholder}
-            value={name}
-            onChangeText={setName}
-          />
-        </View>
+        <InputField
+          label="Name"
+          placeholder="Enter your name..."
+          value={name}
+          onChangeText={setName}
+          icon="account-outline"
+        />
+        <InputField
+          label="Email"
+          placeholder="Enter your email..."
+          value={email}
+          onChangeText={setEmail}
+          icon="email-outline"
+          keyboardType="email-address"
+        />
+        <InputField
+          label="Password"
+          placeholder="Enter your password"
+          value={password}
+          onChangeText={setPassword}
+          icon="lock-outline"
+          secureTextEntry={!isVisible}
+          onToggleVisibility={showPassword}
+          isVisible={isVisible}
+        />
 
-        <Text style={styles.title}>Email</Text>
-        <View style={styles.inputContainer}>
-          <Icon name="email-outline" size={20} color={COLORS.primary} />
-          <TextInput
-            placeholder="Digite seu email..."
-            style={styles.input}
-            placeholderTextColor={COLORS.placeholder}
-            keyboardType="email-address"
-            value={email}
-            onChangeText={setEmail}
-          />
-        </View>
-
-        <Text style={styles.title}>Senha</Text>
-        <View style={styles.inputContainer}>
-          <Icon name="lock-outline" size={20} color={COLORS.primary} />
-          <TextInput
-            placeholder="Digite sua senha..."
-            style={styles.input}
-            placeholderTextColor={COLORS.placeholder}
-            secureTextEntry
-            value={password}
-            onChangeText={setPassword}
-          />
-        </View>
-
-        <TouchableOpacity style={styles.button} onPress={handleRegister} disabled={loading}>
+        <TouchableOpacity
+          style={[styles.button, loading && { opacity: 0.7 }]}
+          onPress={handleRegister}
+          disabled={loading}
+        >
           {loading ? (
             <ActivityIndicator size="small" color={COLORS.white} />
           ) : (
-            <Text style={styles.buttonText}>Cadastrar</Text>
+            <Text style={styles.buttonText}>Register</Text>
           )}
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.buttonBack} onPress={() => navigation.goBack()}>
-          <Text style={styles.backButtonText}>Voltar para tela de Login</Text>
+          <Text style={styles.backButtonText}>Return to Login screen</Text>
         </TouchableOpacity>
       </Animatable.View>
 
-      <Snackbar
+      <CustomSnackbar
         visible={snackbarVisible}
+        message={snackbarMessage}
+        color={snackbarColor}
         onDismiss={() => setSnackbarVisible(false)}
-        duration={2000}
-        style={{ backgroundColor: snackbarColor }}
-        action={{
-          label: "OK",
-          onPress: () => setSnackbarVisible(false),
-        }}
-      >
-        {snackbarMessage}
-      </Snackbar>
+      />
     </View>
   );
 }

@@ -72,7 +72,7 @@ const OrderHistoryScreen = () => {
           renderItem={renderOrder}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
-          ListEmptyComponent={<Text style={styles.emptyText}>Nenhum pedido encontrado.</Text>}
+          ListEmptyComponent={<Text style={styles.emptyText}>No requests found.</Text>}
         />
       )}
     </View>
