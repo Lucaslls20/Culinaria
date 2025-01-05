@@ -7,11 +7,12 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import LinearGradient from "react-native-linear-gradient";
 import Toast from 'react-native-toast-message'; // Biblioteca para feedback visual
 import { auth, db } from "../../Services/fireBaseConfig";
-import { collection, addDoc } from "firebase/firestore";
+import { collection, addDoc, query, where, getDocs } from "firebase/firestore";
 
 type RecipeDetailsProps = NativeStackScreenProps<RootStackParamList, "RecipeDetails">;
 
 type RecipeData = {
+  id: number;
   title: string;
   image: string;
   readyInMinutes: number;
@@ -26,6 +27,8 @@ const RecipeDetails = ({ route, navigation }: RecipeDetailsProps) => {
   const [recipeData, setRecipeData] = useState<RecipeData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [isFavorite, setIsFavorite] = useState<boolean>(false);
+  const [buttonDisabled, setButtonDisabled] = useState<boolean>(false);
 
   const fetchRecipeDetails = async () => {
     try {
@@ -42,9 +45,30 @@ const RecipeDetails = ({ route, navigation }: RecipeDetailsProps) => {
       }
     } catch (error) {
       console.error("Erro ao buscar receita:", error);
-      setError("Não foi possível carregar os dados. Tente novamente mais tarde.");
+      setError("Unable to load data. Please try again later.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const checkIfFavorite = async () => {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    try {
+      const q = query(
+        collection(db, "favorites"),
+        where("userId", "==", user.uid),
+        where("recipeId", "==", recipeId) // Comparação pelo ID da receita
+      );
+      const querySnapshot = await getDocs(q);
+
+      if (!querySnapshot.empty) {
+        setIsFavorite(true);
+        setButtonDisabled(true);
+      }
+    } catch (error) {
+      console.error("Error checking favorites:", error);
     }
   };
 
@@ -52,51 +76,72 @@ const RecipeDetails = ({ route, navigation }: RecipeDetailsProps) => {
     fetchRecipeDetails();
   }, [recipeId]);
 
+  useEffect(() => {
+    if (recipeData) {
+      checkIfFavorite();
+    }
+  }, [recipeData]);
+
   const handleFavorite = async () => {
-    const a = auth;
-    const user = a.currentUser;
+    const user = auth.currentUser;
 
     if (!user) {
       Toast.show({
         type: 'error',
         text1: 'Erro!',
-        text2: 'Você precisa estar logado para favoritar receitas.',
+        text2: 'You need to be logged in to favorite recipes.',
       });
       return;
     }
 
-    const data = db;
+    if (isFavorite) {
+      Toast.show({
+        type: 'info',
+        text1: 'This recipe is already in your favorites.',
+      });
+      return;
+    }
+
+    setButtonDisabled(true);
+
     const favoriteData = {
       userId: user.uid,
+      recipeId: recipeId, // Salva o ID da receita
       title: recipeData?.title,
       image: recipeData?.image,
       addedAt: new Date().toISOString(),
     };
 
     try {
-      const docRef = await addDoc(collection(data, "favorites"), favoriteData);
+      const docRef = await addDoc(collection(db, "favorites"), favoriteData);
       console.log("Receita salva com ID:", docRef.id);
+      console.log(recipeId)
 
       Toast.show({
         type: 'success',
         text1: 'Recipe added to favorites!',
-        text2: 'You can access it in your favorites list.',
+        text2: 'You can access it from your favorites list.',
       });
+
+      setIsFavorite(true);
     } catch (error) {
       console.error("Erro ao salvar nos favoritos:", error);
 
       Toast.show({
         type: 'error',
         text1: 'Erro!',
-        text2: 'Não foi possível adicionar a receita aos favoritos.',
+        text2: 'Unable to add recipe to favorites.',
       });
+
+      setButtonDisabled(false);
     }
   };
+
   if (loading) {
     return (
       <View style={styles.loader}>
         <ActivityIndicator size="large" color="#FF7043" />
-        <Text style={styles.loadingText}>Loading recipe...</Text>
+        <Text style={styles.loadingText}>Carregando receita...</Text>
       </View>
     );
   }
@@ -130,7 +175,7 @@ const RecipeDetails = ({ route, navigation }: RecipeDetailsProps) => {
                 {recipeData?.readyInMinutes} minutes
               </Chip>
               <Chip icon="silverware-fork-knife" style={styles.chip}>
-                {recipeData?.servings} portions
+                {recipeData?.servings} porcions
               </Chip>
             </View>
           </Card.Content>
@@ -152,7 +197,7 @@ const RecipeDetails = ({ route, navigation }: RecipeDetailsProps) => {
             <Text key={step.number} style={styles.stepText}>
               {step.number}. {step.step}
             </Text>
-          )) || <Text style={styles.noStepsText}>Preparation method not available.</Text>}
+          )) || <Text style={styles.noStepsText}>Preparation method unavailable.</Text>}
         </View>
 
         <Button
@@ -161,9 +206,9 @@ const RecipeDetails = ({ route, navigation }: RecipeDetailsProps) => {
           textColor="white"
           style={styles.button}
           onPress={handleFavorite}
+          disabled={buttonDisabled}
         >
-
-          Favorite Recipe
+          {isFavorite ? "Already favorite" : "Favorite Recipe"}
         </Button>
       </ScrollView>
       <Toast />
@@ -172,114 +217,27 @@ const RecipeDetails = ({ route, navigation }: RecipeDetailsProps) => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#FFF3E0",
-  },
-  loader: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#FFF3E0",
-  },
-  loadingText: {
-    color: "#333",
-    fontSize: 16,
-    marginTop: 10,
-  },
-  errorText: {
-    color: "red",
-    fontSize: 18,
-    textAlign: "center",
-  },
-  headerGradient: {
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
-  },
-  header: {
-    backgroundColor: "transparent",
-  },
-  headerTitle: {
-    color: "white",
-    fontWeight: "bold",
-    letterSpacing: 1,
-  },
-  contentContainer: {
-    padding: 15,
-  },
-  card: {
-    elevation: 5,
-    borderRadius: 10,
-    marginBottom: 20,
-    backgroundColor: "#FFF",
-  },
-  image: {
-    width: "100%",
-    height: 220,
-    borderTopLeftRadius: 10,
-    borderTopRightRadius: 10,
-  },
-  title: {
-    fontWeight: "bold",
-    textAlign: "center",
-    marginTop: 10,
-    fontSize: 24,
-    color: "#444",
-    letterSpacing: 0.8,
-  },
-  details: {
-    flexDirection: "row",
-    justifyContent: "space-evenly",
-    marginVertical: 15,
-  },
-  chip: {
-    backgroundColor: "#FF7043",
-    borderRadius: 20,
-  },
-  section: {
-    marginBottom: 20,
-    paddingHorizontal: 10,
-  },
-  sectionTitle: {
-    fontWeight: "bold",
-    fontSize: 20,
-    color: "#FF7043",
-    marginBottom: 10,
-    letterSpacing: 0.5,
-  },
-  ingredientText: {
-    fontSize: 16,
-    color: "#333",
-    marginVertical: 3,
-    paddingLeft: 10,
-    fontWeight: 'bold',
-    letterSpacing: 0.3
-  },
-  stepText: {
-    fontSize: 16,
-    color: "#333",
-    marginVertical: 5,
-    lineHeight: 22,
-    fontWeight: 'bold'
-  },
-  noStepsText: {
-    fontSize: 16,
-    color: "#888",
-    fontStyle: "italic",
-  },
-  button: {
-    marginVertical: 20,
-    marginHorizontal: 50,
-    borderRadius: 25,
-  },
-  ingredientContainer: {
-    flexDirection: "row", // Organiza os itens lado a lado
-    alignItems: "center", // Alinha verticalmente
-    marginVertical: 5,
-  },
-  icon: {
-    marginRight: 10, // Espaçamento entre o ícone e o texto
-  },
+  container: { flex: 1, backgroundColor: "#FFF3E0" },
+  loader: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#FFF3E0" },
+  loadingText: { color: "#333", fontSize: 16, marginTop: 10 },
+  errorText: { color: "red", fontSize: 18, textAlign: "center" },
+  headerGradient: { borderBottomLeftRadius: 20, borderBottomRightRadius: 20 },
+  header: { backgroundColor: "transparent" },
+  headerTitle: { color: "white", fontWeight: "bold", letterSpacing: 1 },
+  contentContainer: { padding: 15 },
+  card: { elevation: 5, borderRadius: 10, marginBottom: 20, backgroundColor: "#FFF" },
+  image: { width: "100%", height: 220, borderTopLeftRadius: 10, borderTopRightRadius: 10 },
+  title: { fontWeight: "bold", textAlign: "center", marginTop: 10, fontSize: 24, color: "#444", letterSpacing: 0.8 },
+  details: { flexDirection: "row", justifyContent: "space-evenly", marginVertical: 15 },
+  chip: { backgroundColor: "#FF7043", borderRadius: 20 },
+  section: { marginBottom: 20, paddingHorizontal: 10 },
+  sectionTitle: { fontWeight: "bold", fontSize: 20, color: "#FF7043", marginBottom: 10, letterSpacing: 0.5 },
+  ingredientContainer: { flexDirection: "row", alignItems: "center", marginVertical: 5 },
+  icon: { marginRight: 10 },
+  ingredientText: { fontSize: 16, color: "#333", marginVertical: 3, paddingLeft: 10, fontWeight: "bold", letterSpacing: 0.3 },
+  stepText: { fontSize: 16, color: "#333", marginVertical: 5, lineHeight: 22, fontWeight: "bold" },
+  noStepsText: { fontSize: 16, color: "#888", fontStyle: "italic" },
+  button: { marginVertical: 20, marginHorizontal: 50, borderRadius: 25 },
 });
 
 export default RecipeDetails;

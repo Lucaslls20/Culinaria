@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, View, ScrollView, Alert } from 'react-native';
-import { Text, Avatar, Divider, List, Button, ActivityIndicator } from 'react-native-paper';
+import { Text, Avatar, Divider, List, Button, ActivityIndicator, Snackbar } from 'react-native-paper';
 import { auth, db } from '../../Services/fireBaseConfig';
 import { User, sendPasswordResetEmail } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from '../../Routes';
+import { logOut } from '../LogOut/function';
 
 const COLORS = {
     primary: "#FF7043",
@@ -26,6 +27,12 @@ const Settings = ({ navigation }: SettingsProps) => {
     const [user, setUser] = useState<User | null>(null);
     const [userName, setUserName] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
+    const [snackbarMessage, setSnackBarMessage] = useState('')
+    const [snackbarVisible, setSnackBarVisible] = useState(false)
+
+    function onDismissSnackBar(): void {
+        setSnackBarVisible(false)
+    }
 
     useEffect(() => {
         const unsubscribe = auth.onAuthStateChanged((currentUser) => {
@@ -61,28 +68,23 @@ const Settings = ({ navigation }: SettingsProps) => {
         }
     };
 
-    const handleLogout = async () => {
-        try {
-            await auth.signOut();
-            Alert.alert("Logout", "Você saiu da sua conta com sucesso!");
-        } catch (error) {
-            Alert.alert("Erro", "Não foi possível sair da conta. Tente novamente.");
-        }
-    };
+
 
     const handlePasswordReset = async () => {
         if (!user?.email) {
-            Alert.alert("Erro", "Email não encontrado. Verifique se você está logado.");
+            Alert.alert("Error", "Email not found. Make sure you are logged in.");
             return;
         }
         try {
             await sendPasswordResetEmail(auth, user.email);
-            Alert.alert(
-                "Alterar Senha",
-                "Um email para redefinição de senha foi enviado para o endereço cadastrado."
+            setSnackBarVisible(true)
+            setSnackBarMessage(
+                `Change Password,
+                 A password reset email has been sent to the registered address.`
             );
         } catch (error: any) {
-            Alert.alert("Erro", error.message || "Não foi possível enviar o email de redefinição de senha.");
+            setSnackBarVisible(true)
+            setSnackBarMessage(`Erro", ${error.message} Não foi possível enviar o email de redefinição de senha.`);
         }
     };
 
@@ -99,71 +101,85 @@ const Settings = ({ navigation }: SettingsProps) => {
     }
 
     return (
-        <ScrollView style={styles.container}>
-            <View style={styles.header}>
-                <Avatar.Text
-                    size={64}
-                    label={(userName?.[0] || "U").toUpperCase()} // Usa a primeira letra do nome do usuário
-                    style={styles.avatar}
-                />
-                <Text style={styles.name}>{userName || "unknown user"}</Text>
-                <Text style={styles.email}>{user?.email || "Email not available"}</Text>
-            </View>
+        <>
+            <ScrollView style={styles.container}>
+                <View style={styles.header}>
+                    <Avatar.Text
+                        size={64}
+                        label={(userName?.[0] || "U").toUpperCase()} // Usa a primeira letra do nome do usuário
+                        style={styles.avatar}
+                    />
+                    <Text style={styles.name}>{userName || "unknown user"}</Text>
+                    <Text style={styles.email}>{user?.email || "Email not available"}</Text>
+                </View>
 
-            <Divider style={styles.divider} />
+                <Divider style={styles.divider} />
 
-            <List.Section>
-                <List.Subheader style={styles.subheader}>Informações da Conta</List.Subheader>
-                <List.Item
-                    style={styles.listItem}
-                    title="Name"
-                    description={userName || "Not available"}
-                    left={() => <List.Icon icon="account" color={COLORS.primary} />}
-                />
-                <List.Item
-                    style={styles.listItem}
-                    title="Email"
-                    description={user?.email || "Not available"}
-                    left={() => <List.Icon icon="email" color={COLORS.primary} />}
-                />
-                <List.Item
-                    style={styles.listItem}
-                    title="Change Password"
-                    left={() => <List.Icon icon="lock-reset" color={COLORS.primary} />}
-                    onPress={handlePasswordReset}
-                />
-            </List.Section>
+                <List.Section>
+                    <List.Subheader style={styles.subheader}>Informações da Conta</List.Subheader>
+                    <List.Item
+                        style={styles.listItem}
+                        title="Name"
+                        description={userName || "Not available"}
+                        left={() => <List.Icon icon="account" color={COLORS.primary} />}
+                    />
+                    <List.Item
+                        style={styles.listItem}
+                        title="Email"
+                        description={user?.email || "Not available"}
+                        left={() => <List.Icon icon="email" color={COLORS.primary} />}
+                    />
+                    <List.Item
+                        style={styles.listItem}
+                        title="Change Password"
+                        left={() => <List.Icon icon="lock-reset" color={COLORS.primary} />}
+                        onPress={handlePasswordReset}
+                    />
+                </List.Section>
 
-            <Divider style={styles.divider} />
+                <Divider style={styles.divider} />
 
-            <List.Section>
-                <List.Subheader style={styles.subheader}>Configurações</List.Subheader>
-                <List.Item
-                    style={styles.listItem}
-                    title="Privacy Policy"
-                    left={() => <List.Icon icon="shield-lock-outline" color={COLORS.primary} />}
-                    onPress={() => navigation.navigate('PrivacyPolitic')}
-                />
-                <List.Item
-                    style={styles.listItem}
-                    title="Log out"
-                    left={() => <List.Icon icon="exit-to-app" color={COLORS.primary} />}
-                    onPress={handleLogout}
-                />
-            </List.Section>
+                <List.Section>
+                    <List.Subheader style={styles.subheader}>Configurações</List.Subheader>
+                    <List.Item
+                        style={styles.listItem}
+                        title="Privacy Policy"
+                        left={() => <List.Icon icon="shield-lock-outline" color={COLORS.primary} />}
+                        onPress={() => navigation.navigate('PrivacyPolitic')}
+                    />
+                    <List.Item
+                        style={styles.listItem}
+                        title="Log out"
+                        left={() => <List.Icon icon="exit-to-app" color={COLORS.primary} />}
+                        onPress={logOut}
+                    />
+                </List.Section>
 
-            <Divider style={styles.divider} />
+                <Divider style={styles.divider} />
 
-            <Button
-                mode="contained"
-                buttonColor={COLORS.primary}
-                textColor={COLORS.white}
-                style={styles.logoutButton}
-                onPress={() => navigation.goBack()}
+                <Button
+                    mode="contained"
+                    buttonColor={COLORS.primary}
+                    textColor={COLORS.white}
+                    style={styles.logoutButton}
+                    onPress={() => navigation.goBack()}
+                >
+                    Go back
+                </Button>
+            </ScrollView>
+            <Snackbar
+                style={{ backgroundColor: COLORS.secondary }}
+                duration={6000}
+                visible={snackbarVisible}
+                onDismiss={onDismissSnackBar}
+                action={{
+                    label: 'Ok',
+                    onPress: () => setSnackBarVisible(false)
+                }}
             >
-             Go back
-            </Button>
-        </ScrollView>
+                <Text style={styles.snackbarText}>{snackbarMessage}</Text>
+            </Snackbar>
+        </>
     );
 };
 
@@ -212,6 +228,13 @@ const styles = StyleSheet.create({
     listItem: {
         marginLeft: 20,
     },
+    snackbarText: {
+        color: COLORS.placeholder,
+        fontSize: 16,
+        fontWeight: 'bold',
+        textAlign: 'center',
+    },
+
 });
 
 export default Settings;

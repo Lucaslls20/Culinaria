@@ -9,13 +9,14 @@ import {
   Modal,
   ActivityIndicator,
 } from "react-native";
-import { Avatar, Divider, Card } from "react-native-paper";
+import { Avatar, Divider, Card, IconButton, Snackbar } from "react-native-paper";
 import LinearGradient from "react-native-linear-gradient";
 import { auth, db } from "../../Services/fireBaseConfig";
 import { logOut } from "../../Components/LogOut/function";
-import { collection, query, where, getDocs, getDoc, doc } from "firebase/firestore";
+import { collection, query, where, getDocs, getDoc, doc, deleteDoc } from "firebase/firestore";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from '../../Routes';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons'
 
 const COLORS = {
   primary: "#FF7043",
@@ -57,6 +58,45 @@ const Profile = ({ navigation }: ProfileProps) => {
   const [recipeDetails, setRecipeDetails] = useState<any>(null);
   const [isRecipeModalVisible, setRecipeModalVisible] = useState(false);
   const [loadingRecipe, setLoadingRecipe] = useState(false);
+  const [isFavoritesEmpty, setIsFavoritesEmpty] = useState(false);
+  const [snackbarMessage, setSnackBarMessage] = useState<string>('')
+  const [snackbarVisible, setSnackBarVisible] = useState<boolean>(false)
+
+  function onDismissSnackBar(): void {
+    setSnackBarVisible(false)
+  }
+
+
+  const handleRemoveFavorite = async (recipeId: string) => {
+    try {
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        setSnackBarMessage(`Error, You must be logged in to remove a favorite.`);
+        setSnackBarVisible(true)
+        return;
+      }
+
+      const favoriteDocRef = doc(db, "favorites", recipeId);
+      await deleteDoc(favoriteDocRef);
+
+      // Atualiza a lista local de favoritos.
+      setFavorites((prevFavorites) =>
+        prevFavorites.filter((favorite) => favorite.id !== recipeId)
+      );
+      setSnackBarMessage(`Success, Recipe removed from favorites.`);
+      setSnackBarVisible(true)
+    } catch (error) {
+      console.error("Error removing favorite:", error);
+      Alert.alert("Error", "Could not remove the recipe.");
+    }
+  };
+
+
+  const favoritesEmpty = () => (
+    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+      <Text style={{ color: COLORS.shadow, textAlign: 'center', fontSize: 25, fontWeight: 'bold' }}>Your favorites list is still empty.</Text>
+    </View>
+  )
 
   useEffect(() => {
     const fetchUserDetails = async () => {
@@ -80,7 +120,7 @@ const Profile = ({ navigation }: ProfileProps) => {
     const currentUser = auth.currentUser;
 
     if (!currentUser) {
-      Alert.alert("Erro", "Você precisa estar logado para visualizar os favoritos.");
+      Alert.alert("Error", "You must be logged in to view bookmarks.");
       return;
     }
 
@@ -97,79 +137,56 @@ const Profile = ({ navigation }: ProfileProps) => {
 
       setFavorites(favoritesList);
       setFavoritesVisible(true);
-    } catch (error) {
-      console.error("Erro ao buscar favoritos:", error);
-      Alert.alert("Erro", "Não foi possível carregar os favoritos.");
+      setIsFavoritesEmpty(favoritesList.length === 0);
+    }
+    catch (error) {
+      console.error("Error fetching favorites:", error);
+      Alert.alert("Error", "Could not load favorites.");
     } finally {
       setLoadingFavorites(false);
     }
   };
 
-  const fetchRecipeDetails = async (id: string) => {
-    setLoadingRecipe(true);
-    try {
-      const response = await fetch(
-        `https://api.spoonacular.com/recipes/${id}/information?apiKey=7f5896bcc0644617a509b22ffc142782` // completar está faltando a chave da api por segurança
-      );
-  
-      if (!response.ok) {
-        throw new Error(`Erro na API: ${response.status}`);
-      }
-  
-      const contentType = response.headers.get("content-type");
-      if (!contentType || !contentType.includes("application/json")) {
-        throw new Error("Resposta não é um JSON válido.");
-      }
-  
-      const data = await response.json();
-      setRecipeDetails(data);
-      setRecipeModalVisible(true);
-    } catch (error) {
-      console.error("Erro ao buscar detalhes da receita:",error);
-      Alert.alert("Erro", "Não foi possível carregar os detalhes da receita.");
-    } finally {
-      setLoadingRecipe(false);
-    }
-  };
 
- 
-  {/* { id: "1", title: "Order History", icon: "history", onPress: () => navigation.navigate('OrderHistory') }, */}
+  {/* { id: "1", title: "Order History", icon: "history", onPress: () => navigation.navigate('OrderHistory') }, */ }
   // tirei o orderHistory por enquanto
 
   const menuItems = [
-   
-    { id: "1", title: "Settings", icon: "cog", onPress: () =>navigation.navigate('Settings') },
+
+    { id: "1", title: "Settings", icon: "cog", onPress: () => navigation.navigate('Settings') },
     { id: "2", title: "Favorites", icon: "heart", onPress: fetchFavorites },
-    { id: "3", title: "Privacy Policy", icon: "file-document", onPress:() => navigation.navigate('PrivacyPolitic') },
+    { id: "3", title: "Privacy Policy", icon: "file-document", onPress: () => navigation.navigate('PrivacyPolitic') },
     { id: "4", title: "Log out", icon: "exit-to-app", onPress: logOut },
   ];
 
   const keyExtractor = (item: { id: string }) => `menu-item-${item.id}`;
 
-  {favorites.length === 0 && !loadingFavorites && (
-    <Text style={{ textAlign: "center", marginTop: 20 }}>
-        Nenhum favorito encontrado.
-    </Text>
-)}
+  {
+    favorites.length === 0 && !loadingFavorites && (
+      <Text style={{ textAlign: "center", marginTop: 20 }}>
+    No favorites found.
+      </Text>
+    )
+  }
 
-const renderMenuItem = ({ item }: { item: typeof menuItems[0] }) => (
-  <TouchableOpacity
-    style={styles.menuItem}
-    onPress={item.onPress}
-    activeOpacity={0.6}
-  >
-    <View style={styles.iconContainer}>
-      <Avatar.Icon
-        size={40}
-        icon={item.icon}
-        color={COLORS.primary}
-        style={{ backgroundColor: COLORS.secondary }}
-      />
-    </View>
-    <Text style={styles.menuText}>{item.title}</Text>
-    <Text style={styles.arrow}>{">"}</Text>
-  </TouchableOpacity>
-);
+  const renderMenuItem = ({ item }: { item: typeof menuItems[0] }) => (
+    <TouchableOpacity
+      style={styles.menuItem}
+      onPress={item.onPress}
+      activeOpacity={0.6}
+    >
+      <View style={styles.iconContainer}>
+        <Avatar.Icon
+          size={40}
+          icon={item.icon}
+          color={COLORS.primary}
+          style={{ backgroundColor: COLORS.secondary }}
+        />
+      </View>
+      <Text style={styles.menuText}>{item.title}</Text>
+      <Text style={styles.arrow}>{">"}</Text>
+    </TouchableOpacity>
+  );
 
 
   return (
@@ -195,7 +212,7 @@ const renderMenuItem = ({ item }: { item: typeof menuItems[0] }) => (
           keyExtractor={keyExtractor}
           initialNumToRender={4}
           contentContainerStyle={styles.listContainer}
-      />
+        />
 
       </LinearGradient>
 
@@ -204,16 +221,27 @@ const renderMenuItem = ({ item }: { item: typeof menuItems[0] }) => (
           <Text style={styles.modalTitle}>Favorites</Text>
           {loadingFavorites ? (
             <ActivityIndicator size="large" color={COLORS.primary} />
+          ) : isFavoritesEmpty ? (
+            favoritesEmpty()
           ) : (
             <FlatList
               data={favorites}
               keyExtractor={(item) => item.id}
               renderItem={({ item }) => (
-                <TouchableOpacity onPress={() => console.log(setRecipeDetails)}>
+                <TouchableOpacity onPress={() => { }}>
                   <Card style={styles.card}>
                     <Card.Cover source={{ uri: item.image }} />
                     <Card.Content>
-                      <Text style={styles.cardTitle}>{item.title}</Text>
+                      <View style={styles.cardContent}>
+                        <Text style={styles.cardTitle}>{item.title}</Text>
+                        <MaterialCommunityIcons
+                          name="delete"
+                          color={COLORS.primary}
+                          size={30}
+                          style={{ textAlignVertical: 'center' }}
+                          onPress={() => handleRemoveFavorite(item.id)}
+                        />
+                      </View>
                     </Card.Content>
                   </Card>
                 </TouchableOpacity>
@@ -225,6 +253,20 @@ const renderMenuItem = ({ item }: { item: typeof menuItems[0] }) => (
           </TouchableOpacity>
         </View>
       </Modal>
+
+      <Snackbar
+        visible={snackbarVisible}
+        onDismiss={onDismissSnackBar}
+        duration={4000}
+        style={{ backgroundColor: COLORS.primary }}
+        action={{
+          label: "Dismiss",
+          onPress: () => setSnackBarVisible(false),
+        }}
+      >
+        {snackbarMessage}
+      </Snackbar>
+
 
     </>
   );
@@ -314,6 +356,20 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     marginTop: 8,
     color: COLORS.textPrimary,
+  },
+  cardContent: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    textAlign: 'center',
+    marginRight: 10,
+    marginHorizontal: 10,
+    marginTop: 10
+  },
+  snackbarText: {
+    color: COLORS.placeholder,
+    fontSize: 16,
+    fontWeight: 'bold',
+    textAlign: 'center',
   },
 });
 
