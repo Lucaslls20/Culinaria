@@ -204,8 +204,8 @@ const Search = ({ navigation }: SearchProps) => {
                             onEndReached={loadMoreResults}
                             onEndReachedThreshold={0.1}
                             removeClippedSubviews
-                            initialNumToRender={6}
-                            maxToRenderPerBatch={8}
+                            initialNumToRender={8}
+                            maxToRenderPerBatch={10}
                         />
                     )}
                 </>
@@ -215,6 +215,8 @@ const Search = ({ navigation }: SearchProps) => {
                     <FlatList
                         data={popularSearches}
                         numColumns={2}
+                        initialNumToRender={4}
+                        maxToRenderPerBatch={6}
                         renderItem={({item}) => <RenderResultItem item={item}/>} // Correção aqui
                         keyExtractor={(item) => item.id.toString()}
                     />

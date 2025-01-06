@@ -47,11 +47,10 @@ const Home = ({ navigation }: HomeProps) => {
     async (query: string = '', page = 1, cuisine: string = '') => {
       if (page === 1) setLoading(true);
       else setLoadingMore(true);
-  
+
       try {
         const response = await axios.get(
-          `https://api.spoonacular.com/recipes/complexSearch?apiKey=${API_KEY}&query=${query}&number=10&offset=${(page - 1) * 10}${
-            cuisine ? `&cuisine=${cuisine}` : ''
+          `https://api.spoonacular.com/recipes/complexSearch?apiKey=${API_KEY}&query=${query}&number=10&offset=${(page - 1) * 10}${cuisine ? `&cuisine=${cuisine}` : ''
           }`
         );
         const newRecipes = response.data.results.map((recipe: any) => ({
@@ -61,7 +60,7 @@ const Home = ({ navigation }: HomeProps) => {
           readyInMinutes: recipe.readyInMinutes || 0,
           servings: recipe.servings || 0,
         }));
-  
+
         if (page === 1) {
           setRecipes(newRecipes);
           setFilteredRecipes(newRecipes);
@@ -80,7 +79,7 @@ const Home = ({ navigation }: HomeProps) => {
     },
     []
   );
-  
+
   const handleSearch = useCallback((query: string) => {
     setSearchQuery(query);
 
@@ -188,19 +187,23 @@ const Home = ({ navigation }: HomeProps) => {
             <Animatable.View animation="slideInUp" duration={400} style={styles.modalContent}>
               <Text style={styles.modalTitle}>Select a Cuisine</Text>
               <View style={styles.chipContainer}>
-                <Chip style={styles.chip} selected={selectedCuisine === ''} onPress={() => setSelectedCuisine('')}>
+                <Chip style={styles.chip} selected={selectedCuisine === ''} onPress={() => {
+                  setSelectedCuisine(''); // Remove seleção de culinária específica
+                  fetchRecipes('', 1); // Carrega receitas como na tela inicial
+                  setVisible(false); // Fecha o modal
+                }}>
                   All
                 </Chip>
                 {cuisines.map((cuisine, index) => (
                   <Chip
-                  key={index}
-                  style={styles.chip}
-                  selected={selectedCuisine === cuisine}
-                  onPress={() => {
-                    setSelectedCuisine(cuisine);
-                    fetchRecipes('', 1, cuisine); // Busca receitas para a culinária selecionada
-                    setVisible(false); // Fecha o modal
-                  }}
+                    key={index}
+                    style={styles.chip}
+                    selected={selectedCuisine === cuisine}
+                    onPress={() => {
+                      setSelectedCuisine(cuisine);
+                      fetchRecipes('', 1, cuisine); // Busca receitas para a culinária selecionada
+                      setVisible(false); // Fecha o modal
+                    }}
                   >
                     {cuisine}
                   </Chip>
@@ -343,17 +346,17 @@ const styles = StyleSheet.create({
     margin: 5,
     backgroundColor: 'orange',
   },
-  emptyContainer:{
+  emptyContainer: {
     backgroundColor: '#FF5722',
-    flex:1,
-    alignItems:'center',
-    justifyContent:'center'
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center'
   },
-    emptyText: {
-      color: '#FFF', // Texto branco para contraste
-      fontSize: 20,
-      fontWeight: 'bold',
-    }
+  emptyText: {
+    color: '#FFF', // Texto branco para contraste
+    fontSize: 20,
+    fontWeight: 'bold',
+  }
 });
 
 export default Home;
