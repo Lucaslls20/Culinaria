@@ -17,6 +17,7 @@ import { collection, query, where, getDocs, getDoc, doc, deleteDoc } from "fireb
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from '../../Routes';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons'
+import FavoriteVideos from "../../Components/FavoritesVideos";
 
 const COLORS = {
   primary: "#FF7043",
@@ -154,9 +155,10 @@ const Profile = ({ navigation }: ProfileProps) => {
   const menuItems = [
 
     { id: "1", title: "Settings", icon: "cog", onPress: () => navigation.navigate('Settings') },
-    { id: "2", title: "Favorites", icon: "heart", onPress: fetchFavorites },
-    { id: "3", title: "Privacy Policy", icon: "file-document", onPress: () => navigation.navigate('PrivacyPolitic') },
-    { id: "4", title: "Log out", icon: "exit-to-app", onPress: logOut },
+    { id: "2", title: "Favorites Recipes", icon: "heart", onPress: fetchFavorites },
+    { id: "3", title: "Favorites Videos", icon: "vimeo", onPress:() => navigation.navigate('FavoriteVideos') },
+    { id: "4", title: "Privacy Policy", icon: "file-document", onPress: () => navigation.navigate('PrivacyPolitic') },
+    { id: "5", title: "Log out", icon: "exit-to-app", onPress: logOut },
   ];
 
   const keyExtractor = (item: { id: string }) => `menu-item-${item.id}`;

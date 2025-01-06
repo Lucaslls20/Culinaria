@@ -8,10 +8,15 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   Alert,
+  Pressable,
 } from "react-native";
 import { IconButton, Button, Searchbar } from "react-native-paper";
 import { WebView } from "react-native-webview";
 import * as Animatable from "react-native-animatable";
+import FontAwesome from "react-native-vector-icons/FontAwesome";
+import { db, auth } from "../../Services/fireBaseConfig";
+import { doc, getDoc, setDoc, updateDoc, arrayUnion, arrayRemove, onSnapshot } from "firebase/firestore";
+
 
 const COLORS = {
   primary: "#FF7043",
@@ -45,6 +50,63 @@ const Videos: React.FC = () => {
   const [buttonLoading, setButtonLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [searchLoading, setSearchLoading] = useState(false);
+  const [favorites, setFavorites] = useState<string[]>([]); // Armazena IDs dos vídeos favoritos
+
+  useEffect(() => {
+    const fetchFavorites = () => {
+      const userId = auth.currentUser?.uid;
+      if (!userId) return;
+
+      const userFavoritesRef = doc(db, "users", userId);
+
+      const unsubscribe = onSnapshot(userFavoritesRef, (docSnapshot) => {
+        if (docSnapshot.exists()) {
+          const favoriteIds = docSnapshot.data()?.favorites || [];
+          setFavorites(favoriteIds.map((id: string) => id)); // Mantém os IDs
+        }
+      });
+
+      return () => unsubscribe();
+    };
+
+    fetchFavorites();
+  }, []);
+  
+
+  const toggleFavorite = async (id: string) => {
+    try {
+      const userId = auth.currentUser?.uid;
+      if (!userId) {
+        throw new Error("Usuário não autenticado");
+      }
+  
+      const userFavoritesRef = doc(db, "users", userId);
+      const docSnapshot = await getDoc(userFavoritesRef);
+  
+      if (docSnapshot.exists()) {
+        const currentFavorites = docSnapshot.data()?.favorites || [];
+  
+        if (currentFavorites.includes(id)) {
+          await updateDoc(userFavoritesRef, {
+            favorites: arrayRemove(id),
+          });
+        } else {
+          await updateDoc(userFavoritesRef, {
+            favorites: arrayUnion(id),
+          });
+        }
+      } else {
+        await setDoc(userFavoritesRef, { favorites: [id] });
+      }
+    } catch (error) {
+      console.error("Erro ao atualizar favoritos:", error);
+      Alert.alert("Não foi possível atualizar os favoritos. Tente novamente.");
+    }
+  };
+
+  const getVideoId = (id: string): string => {
+    return id.startsWith("http") ? id.split("/").pop() || id : id;
+  };
 
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -58,12 +120,12 @@ const Videos: React.FC = () => {
     try {
       const url = `${BASE_API_URL}?query=${query}&number=5&offset=${(pageNum - 1) * 5}&apiKey=${API_KEY}`;
       const response = await fetch(url);
-      if (!response.ok) throw new Error("Network response was not ok");
+      if (!response.ok) throw new Error("Erro na resposta da API");
       const data = await response.json();
 
       if (data.videos && data.videos.length > 0) {
         const formattedVideos = data.videos.map((video: any) => ({
-          id: video.youTubeId,
+          id: video.youTubeId, // Certifique-se de armazenar o ID correto do YouTube
           title: video.title,
           videoUrl: `https://www.youtube.com/embed/${video.youTubeId}`,
           channel: video.channel,
@@ -71,21 +133,21 @@ const Videos: React.FC = () => {
         }));
 
         setVideos((prevVideos) =>
-          pageNum === 1 ? shuffleArray(formattedVideos) : shuffleArray([...prevVideos, ...formattedVideos])
+          pageNum === 1 ? formattedVideos : [...prevVideos, ...formattedVideos]
         );
       } else {
-        console.log("Nenhum vídeo encontrado", "Tente novamente mais tarde.");
+        console.log("Nenhum vídeo encontrado. Tente novamente mais tarde.");
       }
     } catch (error) {
-      console.error("Error fetching videos:", error);
-      Alert.alert("Erro", "Não foi possível carregar os vídeos. Tente novamente.");
+      console.error("Erro ao buscar vídeos:", error);
+      Alert.alert("Erro", "Não foi possível carregar os vídeos.");
     } finally {
       setLoading(false);
       setIsFetchingMore(false);
       setButtonLoading(false);
       setSearchLoading(false);
     }
-  }, [shuffleArray]);
+  }, []);
 
   useEffect(() => {
     fetchVideos(page);
@@ -122,27 +184,34 @@ const Videos: React.FC = () => {
     fetchVideos(1);
   }, [fetchVideos]);
 
-  const renderVideoItem = useCallback(({ item }: { item: VideoData }) => (
-    <Animatable.View animation="fadeInUp" duration={500} style={styles.videoContainer}>
-      <WebView
-        source={{ uri: item.videoUrl }}
-        style={styles.video}
-        javaScriptEnabled
-        allowsFullscreenVideo
-      />
-      <View style={styles.overlay}>
-        <Text style={styles.title}>{item.title}</Text>
-        <Text style={styles.channel}>{item.channel}</Text>
-        <Text style={styles.duration}>{item.duration}</Text>
-        <IconButton
-          icon="play-circle"
-          size={30}
-          style={styles.playIcon}
-          accessibilityLabel="Reproduzir vídeo"
+  const renderVideoItem = useCallback(
+    ({ item }: { item: VideoData }) => (
+      <Animatable.View animation="fadeInUp" duration={500} style={styles.videoContainer}>
+        <WebView
+          source={{ uri: item.videoUrl }}
+          style={styles.video}
+          javaScriptEnabled
+          allowsFullscreenVideo
         />
-      </View>
-    </Animatable.View>
-  ), []);
+        <View style={styles.overlay}>
+          <Text style={styles.title}>{item.title}</Text>
+          <Text style={styles.channel}>{item.channel}</Text>
+          <Text style={styles.duration}>{item.duration}</Text>
+          <Pressable onPress={() => toggleFavorite(getVideoId(item.id))}>
+            <FontAwesome
+              name={favorites.includes(getVideoId(item.id)) ? "heart" : "heart-o"}
+              size={30}
+              color={favorites.includes(getVideoId(item.id)) ? "#FF0015" : "#FFF"}
+              style={styles.playIcon}
+              accessibilityLabel="Favoritar vídeo"
+            />
+          </Pressable>
+        </View>
+      </Animatable.View>
+    ),
+    [favorites]
+  );
+  
 
   if (loading && !searchLoading) {
     return (

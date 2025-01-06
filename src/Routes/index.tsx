@@ -18,6 +18,7 @@ import Profile from "../Pages/Profile";
 import Settings from "../Components/Settings";
 import PrivacyPolicyScreen from "../Components/PrivacyPolicy";
 import OrderHistoryScreen from "../Components/OrderHistory";
+import FavoriteVideos from "../Components/FavoritesVideos";
 
 // Tipagem para parâmetros das rotas do Stack Navigator
 export type RootStackParamList = {
@@ -30,6 +31,7 @@ export type RootStackParamList = {
   Settings:undefined
   PrivacyPolitic:undefined
   OrderHistory:undefined
+  FavoriteVideos: undefined
 };
 
 // Tipagem para parâmetros do Tab Navigator
@@ -157,6 +159,11 @@ export default function Routes() {
         <Stack.Screen
           name="OrderHistory"
           component={OrderHistoryScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="FavoriteVideos"
+          component={FavoriteVideos}
           options={{ headerShown: false }}
         />
 
