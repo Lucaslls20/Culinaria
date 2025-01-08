@@ -19,6 +19,7 @@ import Settings from "../Components/Settings";
 import PrivacyPolicyScreen from "../Components/PrivacyPolicy";
 import OrderHistoryScreen from "../Components/OrderHistory";
 import FavoriteVideos from "../Components/FavoritesVideos";
+import TermsAndConditions from "../Components/TermsAndConditions";
 
 // Tipagem para parâmetros das rotas do Stack Navigator
 export type RootStackParamList = {
@@ -32,6 +33,7 @@ export type RootStackParamList = {
   PrivacyPolitic:undefined
   OrderHistory:undefined
   FavoriteVideos: undefined
+  TermsAndConditions: undefined
 };
 
 // Tipagem para parâmetros do Tab Navigator
@@ -153,6 +155,11 @@ export default function Routes() {
         <Stack.Screen
           name="PrivacyPolitic"
           component={PrivacyPolicyScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="TermsAndConditions"
+          component={TermsAndConditions}
           options={{ headerShown: false }}
         />
        

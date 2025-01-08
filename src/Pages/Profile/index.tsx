@@ -9,7 +9,7 @@ import {
   Modal,
   ActivityIndicator,
 } from "react-native";
-import { Avatar, Divider, Card, IconButton, Snackbar } from "react-native-paper";
+import { Avatar, Divider, Card, IconButton, Snackbar, Title } from "react-native-paper";
 import LinearGradient from "react-native-linear-gradient";
 import { auth, db } from "../../Services/fireBaseConfig";
 import { logOut } from "../../Components/LogOut/function";
@@ -153,11 +153,11 @@ const Profile = ({ navigation }: ProfileProps) => {
   // tirei o orderHistory por enquanto
 
   const menuItems = [
-
-    { id: "1", title: "Settings", icon: "cog", onPress: () => navigation.navigate('Settings') },
+    { id: '6', title: 'Terms and Conditions', icon: 'file-document-multiple-outline', onPress: () => navigation.navigate('TermsAndConditions') },
     { id: "2", title: "Favorites Recipes", icon: "heart", onPress: fetchFavorites },
-    { id: "3", title: "Favorites Videos", icon: "vimeo", onPress:() => navigation.navigate('FavoriteVideos') },
+    { id: "3", title: "Favorites Videos", icon: "vimeo", onPress: () => navigation.navigate('FavoriteVideos') },
     { id: "4", title: "Privacy Policy", icon: "file-document", onPress: () => navigation.navigate('PrivacyPolitic') },
+    { id: "1", title: "Settings", icon: "cog", onPress: () => navigation.navigate('Settings') },
     { id: "5", title: "Log out", icon: "exit-to-app", onPress: logOut },
   ];
 
@@ -166,7 +166,7 @@ const Profile = ({ navigation }: ProfileProps) => {
   {
     favorites.length === 0 && !loadingFavorites && (
       <Text style={{ textAlign: "center", marginTop: 20 }}>
-    No favorites found.
+        No favorites found.
       </Text>
     )
   }
