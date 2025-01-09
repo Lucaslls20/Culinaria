@@ -16,6 +16,7 @@ import * as Animatable from "react-native-animatable";
 import FontAwesome from "react-native-vector-icons/FontAwesome";
 import { db, auth } from "../../Services/fireBaseConfig";
 import { doc, getDoc, setDoc, updateDoc, arrayUnion, arrayRemove, onSnapshot } from "firebase/firestore";
+import Comment from "../../Components/Comment";
 
 
 const COLORS = {
@@ -39,6 +40,7 @@ interface VideoData {
   duration: string;
 }
 
+
 const API_KEY = "7f5896bcc0644617a509b22ffc142782";
 const BASE_API_URL = `https://api.spoonacular.com/food/videos/search`;
 
@@ -51,6 +53,14 @@ const Videos: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [searchLoading, setSearchLoading] = useState(false);
   const [favorites, setFavorites] = useState<string[]>([]); // Armazena IDs dos vídeos favoritos
+  const [isCommentVisible, setIsCommentVisible] = useState(false); // Novo estado para o Comment
+
+  const toggleComment = useCallback(() => {
+    setIsCommentVisible((prev) => !prev);
+    console.log("toggleComment foi chamado. Estado atual:", !isCommentVisible);
+  }, [isCommentVisible]);
+
+
 
   useEffect(() => {
     const fetchFavorites = () => {
@@ -71,7 +81,16 @@ const Videos: React.FC = () => {
 
     fetchFavorites();
   }, []);
-  
+
+  useEffect(() => {
+    if (videos.length > 0) {
+      const ids = videos.map((video) => video.id);
+      const uniqueIds = new Set(ids);
+      console.log(`Total IDs: ${ids.length}, IDs Únicos: ${uniqueIds.size}`);
+    }
+  }, [videos]);
+
+
 
   const toggleFavorite = async (id: string) => {
     try {
@@ -79,13 +98,13 @@ const Videos: React.FC = () => {
       if (!userId) {
         throw new Error("Usuário não autenticado");
       }
-  
+
       const userFavoritesRef = doc(db, "users", userId);
       const docSnapshot = await getDoc(userFavoritesRef);
-  
+
       if (docSnapshot.exists()) {
         const currentFavorites = docSnapshot.data()?.favorites || [];
-  
+
         if (currentFavorites.includes(id)) {
           await updateDoc(userFavoritesRef, {
             favorites: arrayRemove(id),
@@ -197,21 +216,30 @@ const Videos: React.FC = () => {
           <Text style={styles.title}>{item.title}</Text>
           <Text style={styles.channel}>{item.channel}</Text>
           <Text style={styles.duration}>{item.duration}</Text>
+          <Pressable onPress={toggleComment}>
+            <FontAwesome
+              name="comment-o"
+              size={25}
+              color="#FFF"
+              style={styles.playIcon}
+              accessibilityLabel="Comment here"
+            />
+          </Pressable>
           <Pressable onPress={() => toggleFavorite(getVideoId(item.id))}>
             <FontAwesome
               name={favorites.includes(getVideoId(item.id)) ? "heart" : "heart-o"}
-              size={30}
+              size={25}
               color={favorites.includes(getVideoId(item.id)) ? "#FF0015" : "#FFF"}
               style={styles.playIcon}
-              accessibilityLabel="Favoritar vídeo"
+              accessibilityLabel="Favorite Video"
             />
           </Pressable>
         </View>
       </Animatable.View>
     ),
-    [favorites]
+    [favorites, toggleComment]
   );
-  
+
 
   if (loading && !searchLoading) {
     return (
@@ -238,7 +266,7 @@ const Videos: React.FC = () => {
       ) : (
         <FlatList
           data={shuffledVideos}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item, index) => `${item.id}-${index}`}
           renderItem={renderVideoItem}
           ListFooterComponent={
             buttonLoading ? (
@@ -262,7 +290,16 @@ const Videos: React.FC = () => {
           contentContainerStyle={styles.listContainer}
         />
       )}
-      <Button
+      {isCommentVisible && (
+        <Pressable
+          style={styles.overlayPressable}
+          onPress={toggleComment} // Fecha o Comment ao tocar fora
+        >
+          
+            <Comment  onClose={toggleComment} />
+        </Pressable>
+      )}
+      {/*  <Button
         mode="contained"
         onPress={reloadVideos}
         style={styles.reloadButton}
@@ -271,9 +308,11 @@ const Videos: React.FC = () => {
       >
         Reload
       </Button>
+      */}
     </View>
   );
 };
+
 
 
 const styles = StyleSheet.create({
@@ -326,6 +365,7 @@ const styles = StyleSheet.create({
   },
   playIcon: {
     alignSelf: "center",
+    margin: 10
   },
   loadingContainer: {
     flex: 1,
@@ -351,7 +391,6 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   reloadButton: {
-    position: "absolute",
     bottom: 20,
     right: 20,
     backgroundColor: COLORS.primary,
@@ -363,6 +402,29 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary,
     borderRadius: 12,
     elevation: 5,
+  },
+  overlayPressable: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.5)", // Fundo semi-transparente
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 1000, // Garante que fique acima dos outros elementos
+  },
+  commentContainer: {
+    width: "90%",
+    maxHeight: "80%",
+    backgroundColor: COLORS.white,
+    borderRadius: 10,
+    padding: 20,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 10,
   },
 });
 
