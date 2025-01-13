@@ -20,6 +20,8 @@ import PrivacyPolicyScreen from "../Components/PrivacyPolicy";
 import OrderHistoryScreen from "../Components/OrderHistory";
 import FavoriteVideos from "../Components/FavoritesVideos";
 import TermsAndConditions from "../Components/TermsAndConditions";
+import recipeData from '../data/recipes.json'
+
 
 // Tipagem para parâmetros das rotas do Stack Navigator
 export type RootStackParamList = {
