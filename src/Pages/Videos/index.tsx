@@ -54,12 +54,13 @@ const Videos: React.FC = () => {
   const [searchLoading, setSearchLoading] = useState(false);
   const [favorites, setFavorites] = useState<string[]>([]); // Armazena IDs dos vídeos favoritos
   const [isCommentVisible, setIsCommentVisible] = useState(false); // Novo estado para o Comment
+  const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null);
 
-  const toggleComment = useCallback(() => {
+
+  const toggleComment = useCallback((videoId: string) => {
+    setSelectedVideoId(videoId);
     setIsCommentVisible((prev) => !prev);
-    console.log("toggleComment foi chamado. Estado atual:", !isCommentVisible);
-  }, [isCommentVisible]);
-
+  }, []);
 
 
   useEffect(() => {
@@ -95,33 +96,25 @@ const Videos: React.FC = () => {
   const toggleFavorite = async (id: string) => {
     try {
       const userId = auth.currentUser?.uid;
-      if (!userId) {
-        throw new Error("Usuário não autenticado");
-      }
-
+      if (!userId) return;
       const userFavoritesRef = doc(db, "users", userId);
       const docSnapshot = await getDoc(userFavoritesRef);
 
       if (docSnapshot.exists()) {
         const currentFavorites = docSnapshot.data()?.favorites || [];
+        const update = currentFavorites.includes(id)
+          ? { favorites: arrayRemove(id) }
+          : { favorites: arrayUnion(id) };
 
-        if (currentFavorites.includes(id)) {
-          await updateDoc(userFavoritesRef, {
-            favorites: arrayRemove(id),
-          });
-        } else {
-          await updateDoc(userFavoritesRef, {
-            favorites: arrayUnion(id),
-          });
-        }
+        await updateDoc(userFavoritesRef, update);
       } else {
         await setDoc(userFavoritesRef, { favorites: [id] });
       }
     } catch (error) {
-      console.error("Erro ao atualizar favoritos:", error);
-      Alert.alert("Não foi possível atualizar os favoritos. Tente novamente.");
+      Alert.alert("Erro", "Não foi possível atualizar os favoritos.");
     }
   };
+
 
   const getVideoId = (id: string): string => {
     return id.startsWith("http") ? id.split("/").pop() || id : id;
@@ -195,50 +188,34 @@ const Videos: React.FC = () => {
     }
   }, [isFetchingMore]);
 
-  const reloadVideos = useCallback(() => {
-    setLoading(true);
-    setVideos([]);
-    setPage(1);
-    setSearchTerm("");
-    fetchVideos(1);
-  }, [fetchVideos]);
 
-  const renderVideoItem = useCallback(
-    ({ item }: { item: VideoData }) => (
-      <Animatable.View animation="fadeInUp" duration={500} style={styles.videoContainer}>
-        <WebView
-          source={{ uri: item.videoUrl }}
-          style={styles.video}
-          javaScriptEnabled
-          allowsFullscreenVideo
-        />
-        <View style={styles.overlay}>
-          <Text style={styles.title}>{item.title}</Text>
-          <Text style={styles.channel}>{item.channel}</Text>
-          <Text style={styles.duration}>{item.duration}</Text>
-          <Pressable onPress={toggleComment}>
-            <FontAwesome
-              name="comment-o"
-              size={25}
-              color="#FFF"
-              style={styles.playIcon}
-              accessibilityLabel="Comment here"
-            />
-          </Pressable>
-          <Pressable onPress={() => toggleFavorite(getVideoId(item.id))}>
-            <FontAwesome
-              name={favorites.includes(getVideoId(item.id)) ? "heart" : "heart-o"}
-              size={25}
-              color={favorites.includes(getVideoId(item.id)) ? "#FF0015" : "#FFF"}
-              style={styles.playIcon}
-              accessibilityLabel="Favorite Video"
-            />
-          </Pressable>
-        </View>
-      </Animatable.View>
-    ),
-    [favorites, toggleComment]
+  const renderVideoItem = ({ item }: { item: any }) => (
+    <Animatable.View animation="fadeInUp" style={styles.videoContainer}>
+      <WebView source={{ uri: item.videoUrl }} style={styles.video} />
+      <View style={styles.overlay}>
+        <Text style={styles.title}>{item.title}</Text>
+        <Pressable onPress={() => toggleComment(item.id)}>
+          <FontAwesome name="comment-o" size={28} color="#FFF"  />
+        </Pressable>
+        <Pressable onPress={() => toggleFavorite(item.id)}>
+          <FontAwesome
+            name={favorites.includes(item.id) ? "heart" : "heart-o"}
+            size={28}
+            color={favorites.includes(item.id) ? "#FF0015" : "#FFF"}
+           
+          />
+        </Pressable>
+      </View>
+      {selectedVideoId === item.id && (
+      <Comment
+        onClose={() => setIsCommentVisible(false)}
+        visible={isCommentVisible}
+        videoId={item.id}
+      />
+    )}
+    </Animatable.View>
   );
+  
 
 
   if (loading && !searchLoading) {
@@ -290,25 +267,7 @@ const Videos: React.FC = () => {
           contentContainerStyle={styles.listContainer}
         />
       )}
-      {isCommentVisible && (
-        <Pressable
-          style={styles.overlayPressable}
-          onPress={toggleComment} // Fecha o Comment ao tocar fora
-        >
-          
-            <Comment  onClose={toggleComment} />
-        </Pressable>
-      )}
-      {/*  <Button
-        mode="contained"
-        onPress={reloadVideos}
-        style={styles.reloadButton}
-        labelStyle={{ color: COLORS.white }}
-        accessibilityLabel="Recarregar vídeos"
-      >
-        Reload
-      </Button>
-      */}
+      
     </View>
   );
 };
@@ -346,6 +305,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    gap:20
   },
   title: {
     color: COLORS.white,
