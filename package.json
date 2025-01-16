@@ -29,6 +29,7 @@
     "react-native": "0.76.0",
     "react-native-animatable": "^1.4.0",
     "react-native-dotenv": "^3.4.11",
+    "react-native-fast-image": "^8.6.3",
     "react-native-linear-gradient": "^2.8.3",
     "react-native-localize": "^3.3.0",
     "react-native-modal": "^13.0.1",

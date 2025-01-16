@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   View,
   StyleSheet,
@@ -17,7 +17,6 @@ import { collection, query, where, getDocs, getDoc, doc, deleteDoc } from "fireb
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from '../../Routes';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons'
-import FavoriteVideos from "../../Components/FavoritesVideos";
 
 const COLORS = {
   primary: "#FF7043",
@@ -62,13 +61,13 @@ const Profile = ({ navigation }: ProfileProps) => {
   const [isFavoritesEmpty, setIsFavoritesEmpty] = useState(false);
   const [snackbarMessage, setSnackBarMessage] = useState<string>('')
   const [snackbarVisible, setSnackBarVisible] = useState<boolean>(false)
+  const [isRemovingFavorite, setIsRemovingFavorite] = useState(false);
 
   function onDismissSnackBar(): void {
     setSnackBarVisible(false)
   }
 
-
-  const handleRemoveFavorite = async (recipeId: string) => {
+  const handleRemoveFavorite = useCallback(async (recipeId: string) => {
     try {
       const currentUser = auth.currentUser;
       if (!currentUser) {
@@ -77,6 +76,7 @@ const Profile = ({ navigation }: ProfileProps) => {
         return;
       }
 
+      setIsRemovingFavorite(true);
       const favoriteDocRef = doc(db, "favorites", recipeId);
       await deleteDoc(favoriteDocRef);
 
@@ -89,9 +89,10 @@ const Profile = ({ navigation }: ProfileProps) => {
     } catch (error) {
       console.error("Error removing favorite:", error);
       Alert.alert("Error", "Could not remove the recipe.");
+    } finally {
+      setIsRemovingFavorite(false);
     }
-  };
-
+  }, []);
 
   const favoritesEmpty = () => (
     <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
@@ -117,7 +118,8 @@ const Profile = ({ navigation }: ProfileProps) => {
 
     fetchUserDetails();
   }, []);
-  const fetchFavorites = async () => {
+
+  const fetchFavorites = useCallback(async () => {
     const currentUser = auth.currentUser;
 
     if (!currentUser) {
@@ -146,11 +148,7 @@ const Profile = ({ navigation }: ProfileProps) => {
     } finally {
       setLoadingFavorites(false);
     }
-  };
-
-
-  {/* { id: "1", title: "Order History", icon: "history", onPress: () => navigation.navigate('OrderHistory') }, */ }
-  // tirei o orderHistory por enquanto
+  }, []);
 
   const menuItems = [
     { id: '6', title: 'Terms and Conditions', icon: 'file-document-multiple-outline', onPress: () => navigation.navigate('TermsAndConditions') },
@@ -162,14 +160,6 @@ const Profile = ({ navigation }: ProfileProps) => {
   ];
 
   const keyExtractor = (item: { id: string }) => `menu-item-${item.id}`;
-
-  {
-    favorites.length === 0 && !loadingFavorites && (
-      <Text style={{ textAlign: "center", marginTop: 20 }}>
-        No favorites found.
-      </Text>
-    )
-  }
 
   const renderMenuItem = ({ item }: { item: typeof menuItems[0] }) => (
     <TouchableOpacity
@@ -189,7 +179,7 @@ const Profile = ({ navigation }: ProfileProps) => {
       <Text style={styles.arrow}>{">"}</Text>
     </TouchableOpacity>
   );
-
+  
 
   return (
     <>
@@ -214,6 +204,13 @@ const Profile = ({ navigation }: ProfileProps) => {
           keyExtractor={keyExtractor}
           initialNumToRender={4}
           contentContainerStyle={styles.listContainer}
+          windowSize={5}
+          maxToRenderPerBatch={5}
+          getItemLayout={(data, index) => ({
+            length: 60,
+            offset: 60 * index,
+            index,
+          })}
         />
 
       </LinearGradient>
@@ -268,8 +265,6 @@ const Profile = ({ navigation }: ProfileProps) => {
       >
         {snackbarMessage}
       </Snackbar>
-
-
     </>
   );
 };

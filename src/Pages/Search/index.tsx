@@ -18,7 +18,7 @@ import axios from "axios";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from '../../Routes';
 
-type SearchProps ={
+type SearchProps = {
     navigation: NativeStackNavigationProp<RootStackParamList, "Tabs">;
 }
 
@@ -81,8 +81,8 @@ const Search = ({ navigation }: SearchProps) => {
             })
         ).start();
     }, [spinValue]);
-    
-    
+
+
     const fetchPopularSearches = useCallback(async () => {
         try {
             const response = await axios.get(
@@ -186,28 +186,28 @@ const Search = ({ navigation }: SearchProps) => {
             {searchQuery ? (
                 <>
                     <Text style={styles.sectionTitle}>
-                    Search results</Text>
+                        Search results</Text>
                     {loading ? (
                         <View style={styles.spinnerContainer}>
                             <Animated.View style={[styles.spinner, { transform: [{ rotate: spin }] }]} />
                         </View>
                     ) :
-                    searchResults.length === 0 ? (
-                        renderNoResults()
-                    ) : (
-                        <FlatList
-                            key={numColumns}
-                            numColumns={numColumns}
-                            data={searchResults}
-                            renderItem={({ item }) => <RenderResultItem item={item} />}
-                            keyExtractor={(item) => item.id.toString()}
-                            onEndReached={loadMoreResults}
-                            onEndReachedThreshold={0.1}
-                            removeClippedSubviews
-                            initialNumToRender={8}
-                            maxToRenderPerBatch={10}
-                        />
-                    )}
+                        searchResults.length === 0 ? (
+                            renderNoResults()
+                        ) : (
+                            <FlatList
+                                key={numColumns}
+                                numColumns={numColumns}
+                                data={searchResults}
+                                renderItem={({ item }) => <RenderResultItem item={item} />}
+                                keyExtractor={(item) => item.id.toString()}
+                                onEndReached={loadMoreResults}
+                                onEndReachedThreshold={0.1}
+                                removeClippedSubviews
+                                initialNumToRender={8}
+                                maxToRenderPerBatch={10}
+                            />
+                        )}
                 </>
             ) : (
                 <>
@@ -217,19 +217,25 @@ const Search = ({ navigation }: SearchProps) => {
                         numColumns={2}
                         initialNumToRender={4}
                         maxToRenderPerBatch={6}
-                        renderItem={({item}) => <RenderResultItem item={item}/>} // Correção aqui
+                        renderItem={({ item }) => <RenderResultItem item={item} />} // Correção aqui
                         keyExtractor={(item) => item.id.toString()}
+                        getItemLayout={(data, index) => ({
+                            length: 200, // Altura do item
+                            offset: 200 * index,
+                            index,
+                        })}
+
                     />
 
 
                     <Text style={styles.sectionTitle}>
-                    Latest Recipes</Text>
+                        Latest Recipes</Text>
                     <FlatList
                         data={recentlyViewed}
                         horizontal
                         showsHorizontalScrollIndicator={false}
                         renderItem={({ item }) => (
-                            <Card style={styles.recentCard}  onPress={() => navigation.navigate("RecipeDetails", { recipeId: item.id })}>
+                            <Card style={styles.recentCard} onPress={() => navigation.navigate("RecipeDetails", { recipeId: item.id })}>
                                 <Card.Cover source={{ uri: item.image }} style={styles.cardCover} />
                                 <Card.Content>
                                     <Title style={styles.recentTitle}>{item.title}</Title>
@@ -237,6 +243,12 @@ const Search = ({ navigation }: SearchProps) => {
                             </Card>
                         )}
                         keyExtractor={(item) => item.id.toString()}
+                        getItemLayout={(data, index) => ({
+                            length: 200, // Altura do item
+                            offset: 200 * index,
+                            index,
+                        })}
+
                     />
                 </>
             )}
@@ -333,7 +345,7 @@ const styles = StyleSheet.create({
         fontWeight: "bold",
         paddingVertical: 4,
         paddingHorizontal: 8,
-       // backgroundColor: "rgba(0, 0, 0, 0.6)", // Fundo semitransparente.
+        // backgroundColor: "rgba(0, 0, 0, 0.6)", // Fundo semitransparente.
         borderBottomLeftRadius: 12,
         borderBottomRightRadius: 12,
         overflow: "hidden",

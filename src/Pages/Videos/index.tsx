@@ -188,12 +188,19 @@ const Videos: React.FC = () => {
     }
   }, [isFetchingMore]);
 
+  const getItemLayout = (data: ArrayLike<VideoData> | null | undefined, index: number) => ({
+    length: height / 2,
+    offset: (height / 2) * index,
+    index,
+  });
+  
+
 
   const renderVideoItem = ({ item }: { item: any }) => (
     <Animatable.View animation="fadeInUp" style={styles.videoContainer}>
       <WebView source={{ uri: item.videoUrl }} style={styles.video} />
       <View style={styles.overlay}>
-        <Text style={styles.title}>{item.title}</Text>
+        <Text style={styles.title} numberOfLines={1} ellipsizeMode="tail">{item.title}</Text>
         <Pressable onPress={() => toggleComment(item.id)}>
           <FontAwesome name="comment-o" size={28} color="#FFF"  />
         </Pressable>
@@ -245,6 +252,8 @@ const Videos: React.FC = () => {
           data={shuffledVideos}
           keyExtractor={(item, index) => `${item.id}-${index}`}
           renderItem={renderVideoItem}
+          getItemLayout={getItemLayout}
+          initialNumToRender={5}
           ListFooterComponent={
             buttonLoading ? (
               <ActivityIndicator size="small" color={COLORS.primary} />

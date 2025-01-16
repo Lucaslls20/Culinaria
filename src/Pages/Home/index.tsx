@@ -7,13 +7,14 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
-import { Text, Card, Appbar, Button, Portal, Modal, Chip, Provider, Searchbar } from 'react-native-paper';
+import { Text, Card, Appbar, Button, Portal, Chip, Provider, Searchbar } from 'react-native-paper';
 import LinearGradient from 'react-native-linear-gradient';
 import axios from 'axios';
 import * as Animatable from 'react-native-animatable';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from '../../Routes';
+import Modal from 'react-native-modal'
 
 const API_KEY = '7f5896bcc0644617a509b22ffc142782'; // Substitua pela sua chave
 
@@ -40,6 +41,7 @@ const Home = ({ navigation }: HomeProps) => {
   const [loadingMore, setLoadingMore] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [hasMoreResults, setHasMoreResults] = useState(true);
+
 
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -103,7 +105,7 @@ const Home = ({ navigation }: HomeProps) => {
   }, [currentPage, fetchRecipes, hasMoreResults, loadingMore, searchQuery]);
 
   const renderRecipe = ({ item }: { item: Recipe }) => (
-    <Animatable.View animation="fadeIn" duration={500} style={styles.cardWrapper}>
+    <Animatable.View animation="slideInUp" duration={500} style={styles.cardWrapper}>
       <Card style={styles.card}>
         <View style={styles.imageContainer}>
           <Image source={{ uri: item.image }} style={styles.image} accessibilityLabel={`Imagem da receita ${item.title}`} />
@@ -118,6 +120,8 @@ const Home = ({ navigation }: HomeProps) => {
             textColor="#FFF"
             style={styles.cardButton}
             labelStyle={{ fontWeight: 'bold' }}
+            accessibilityRole="button"
+            accessibilityLabel={`View recipe: ${item.title}`}
             buttonColor="#FF5722"
             onPress={() => navigation.navigate("RecipeDetails", { recipeId: item.id })}>
             See Recipe
@@ -172,6 +176,15 @@ const Home = ({ navigation }: HomeProps) => {
             contentContainerStyle={styles.listContent}
             onEndReached={loadMoreRecipes}
             onEndReachedThreshold={0.5}
+            getItemLayout={(data, index) => ({
+              length: 150, // Altura aproximada de cada item
+              offset: 150 * index,
+              index,
+            })}
+            initialNumToRender={10}
+            maxToRenderPerBatch={5}
+            windowSize={10}
+
             ListFooterComponent={
               loadingMore ? (
                 <View style={styles.loadingMoreContainer}>
@@ -183,7 +196,13 @@ const Home = ({ navigation }: HomeProps) => {
         )}
 
         <Portal>
-          <Modal visible={visible} onDismiss={() => setVisible(false)} contentContainerStyle={styles.modal}>
+          <Modal
+            isVisible={visible}
+            onBackdropPress={() => setVisible(false)}
+            onSwipeComplete={() => setVisible(false)}
+            swipeDirection="down"
+            style={styles.modal}
+          >
             <Animatable.View animation="slideInUp" duration={400} style={styles.modalContent}>
               <Text style={styles.modalTitle}>Select a Cuisine</Text>
               <View style={styles.chipContainer}>
@@ -315,22 +334,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modal: {
-    backgroundColor: 'white',
-    margin: 20,
-    borderRadius: 10,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 4,
+    flex: 1, // Garante que o modal ocupe a tela inteira
+    justifyContent: 'center',
+    alignItems: 'center',
+    margin: 0, // Remove margem para evitar espaço extra ao redor do modal
+   
   },
   modalContent: {
     alignItems: 'center',
     backgroundColor: '#FF7043',
     borderRadius: 10,
     padding: 15,
+    width: '90%', // Ajuste para controlar a largura do conteúdo
   },
+  
   modalTitle: {
     fontWeight: 'bold',
     fontSize: 18,
