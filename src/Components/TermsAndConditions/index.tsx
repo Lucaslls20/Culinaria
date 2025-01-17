@@ -1,6 +1,9 @@
 import React from 'react';
 import { View, ScrollView, StyleSheet } from 'react-native';
 import { Text, Appbar, Card } from 'react-native-paper';
+import { Linking } from 'react-native';
+import Feather from 'react-native-vector-icons/Feather'
+import { useNavigation } from '@react-navigation/native';
 
 const COLORS = {
   primary: "#FF7043",
@@ -14,10 +17,14 @@ const COLORS = {
 };
 
 const TermsAndConditions: React.FC = () => {
+  const navigation = useNavigation()
   return (
     <View style={styles.container}>
-      <Appbar.Header style={styles.header}>
+      <Appbar.Header style={styles.header} accessible accessibilityLabel="Terms and Conditions Header">
+        <View style={{gap:10,flexDirection:'row', marginLeft:10, alignItems:'center', justifyContent:'center'}}>
+        <Feather name='arrow-left' size={25} color='#333' onPress={() => navigation.goBack()} />
         <Appbar.Content title="Terms and Conditions" color={COLORS.white} />
+        </View>
       </Appbar.Header>
 
       <ScrollView contentContainerStyle={styles.scrollViewContent}>
@@ -69,9 +76,9 @@ const TermsAndConditions: React.FC = () => {
             </Text>
 
             <Text style={styles.subtitle}>7. Contact</Text>
-            <Text style={styles.paragraph}>
+            <Text style={styles.paragraph} onPress={() => Linking.openURL('mailto:lucasReserva571@gmail.com')}>
               If you have any questions or concerns regarding these Terms and Conditions,
-              please contact us via email at: lucasReserva571@gmail.com
+              please contact us via email at: <Text style={{textDecorationLine:'underline'}}>lucasReserva571@gmail.com</Text>
             </Text>
 
             <Text style={styles.footer}>

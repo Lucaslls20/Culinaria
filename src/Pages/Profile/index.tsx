@@ -17,6 +17,7 @@ import { collection, query, where, getDocs, getDoc, doc, deleteDoc } from "fireb
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from '../../Routes';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons'
+import FontAwesome from 'react-native-vector-icons/FontAwesome'
 
 const COLORS = {
   primary: "#FF7043",
@@ -217,7 +218,7 @@ const Profile = ({ navigation }: ProfileProps) => {
 
       <Modal visible={isFavoritesVisible} animationType="slide" onRequestClose={() => setFavoritesVisible(false)}>
         <View style={styles.modalContainer}>
-          <Text style={styles.modalTitle}>Favorites</Text>
+          <Text style={styles.modalTitle}>Favorites Recipes</Text>
           {loadingFavorites ? (
             <ActivityIndicator size="large" color={COLORS.primary} />
           ) : isFavoritesEmpty ? (
@@ -248,6 +249,7 @@ const Profile = ({ navigation }: ProfileProps) => {
             />
           )}
           <TouchableOpacity style={styles.closeButton} onPress={() => setFavoritesVisible(false)}>
+            <FontAwesome name="arrow-left" size={20} color={COLORS.white} />
             <Text style={styles.closeButtonText}>Close</Text>
           </TouchableOpacity>
         </View>
@@ -257,13 +259,13 @@ const Profile = ({ navigation }: ProfileProps) => {
         visible={snackbarVisible}
         onDismiss={onDismissSnackBar}
         duration={4000}
-        style={{ backgroundColor: COLORS.primary }}
+        style={{ backgroundColor: COLORS.cardBackground }}
         action={{
           label: "Dismiss",
           onPress: () => setSnackBarVisible(false),
         }}
       >
-        {snackbarMessage}
+       <Text style={{color:'#333'}}>{snackbarMessage}</Text>
       </Snackbar>
     </>
   );
@@ -338,10 +340,13 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: "center",
     marginTop: 20,
+    flexDirection:'row',
+    justifyContent:'center',
+    gap:5
   },
   closeButtonText: {
     color: COLORS.white,
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: "bold",
   },
   card: {

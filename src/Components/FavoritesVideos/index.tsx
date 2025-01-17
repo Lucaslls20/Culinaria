@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, FlatList, ActivityIndicator, StyleSheet, TouchableOpacity } from "react-native";
+import { View, Text, FlatList, ActivityIndicator, StyleSheet, TouchableOpacity,Alert } from "react-native";
+import { Snackbar } from "react-native-paper";
 import { WebView } from "react-native-webview";
 import { auth, db } from '../../Services/fireBaseConfig'
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { useNavigation } from "@react-navigation/native";
+import FontAwesome from 'react-native-vector-icons/FontAwesome'
 
 const COLORS = {
   primary: "#FF7043",
@@ -19,7 +21,9 @@ const COLORS = {
 const FavoriteVideos = () => {
   const [favorites, setFavorites] = useState<{ id: string; title: string; url: string }[]>([]);
   const [loading, setLoading] = useState(true);
-  
+  const [snackbarVisible, setSnackbarVisible] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState("");
+
   const navigation = useNavigation()
 
   const fetchFavorites = async () => {
@@ -52,17 +56,47 @@ const FavoriteVideos = () => {
     fetchFavorites();
   }, []);
 
+  const removeFavorite = async (id: string) => {
+    try {
+      const userId = auth.currentUser?.uid;
+      if (!userId) throw new Error("Usuário não autenticado");
+
+      const userFavoritesRef = doc(db, "users", userId);
+      const updatedFavorites = favorites.filter((video) => video.id !== id);
+      await updateDoc(userFavoritesRef, { favorites: updatedFavorites.map((video) => video.id) });
+
+      setFavorites(updatedFavorites);
+      setSnackbarMessage("Vídeo removido dos favoritos.");
+      setSnackbarVisible(true);
+    } catch (error) {
+      console.error("Erro ao remover favorito:", error);
+      setSnackbarMessage("Erro ao remover favorito.");
+      setSnackbarVisible(true);
+    }
+  };
+
+  useEffect(() => {
+    fetchFavorites();
+  }, []);
+
+
   const renderFavoriteItem = ({ item }: { item: { id: string; title: string; url: string } }) => (
-    <View style={styles.videoContainer}>
+    <TouchableOpacity style={styles.videoContainer}>
       <WebView source={{ uri: item.url }} style={styles.video} javaScriptEnabled allowsFullscreenVideo />
-      <Text style={styles.title}>{item.title}</Text>
-    </View>
+      <View style={styles.row}>
+        <Text style={styles.title}>{item.title}</Text>
+        <TouchableOpacity onPress={() => removeFavorite(item.id)} style={styles.iconContainer}>
+          <FontAwesome name="trash" size={20} color={COLORS.textSecondary} />
+        </TouchableOpacity>
+      </View>
+    </TouchableOpacity>
   );
+  
 
   return (
     <View style={styles.container}>
-      <View style={{marginBottom:20}}>
-      <Text style={{fontSize:24, fontWeight:'bold', color:COLORS.textPrimary, marginBottom:5, marginTop:10}}>Favorites Videos</Text>
+      <View style={{ marginBottom: 20 }}>
+        <Text style={{ fontSize: 24, fontWeight: 'bold', color: COLORS.textPrimary, marginBottom: 5, marginTop: 10 }}>Favorites Videos</Text>
       </View>
       {loading ? (
         <ActivityIndicator size="large" color="#0000ff" />
@@ -71,13 +105,31 @@ const FavoriteVideos = () => {
           data={favorites}
           keyExtractor={(item) => item.id}
           renderItem={renderFavoriteItem}
+          initialNumToRender={5}
+          windowSize={10}
+          contentContainerStyle={{ paddingBottom: 20 }}
         />
       ) : (
         <Text style={styles.noFavoritesText}>Nenhum vídeo favorito encontrado.</Text>
       )}
       <TouchableOpacity style={styles.closeButton} onPress={() => navigation.goBack()}>
+        <FontAwesome name="arrow-left" size={20} color={COLORS.white} />
         <Text style={styles.closeButtonText}>Close</Text>
       </TouchableOpacity>
+
+      <Snackbar
+        visible={snackbarVisible}
+        style={{backgroundColor:COLORS.cardBackground}}
+        onDismiss={() => setSnackbarVisible(false)}
+        duration={3000}
+        action={{
+          label: "Fechar",
+          onPress: () => setSnackbarVisible(false),
+        }}
+      >
+       <Text style={{color:'#333'}}>{snackbarMessage}</Text> 
+      </Snackbar>
+
     </View>
   );
 };
@@ -89,20 +141,30 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   videoContainer: {
-    marginBottom: 20,
-    backgroundColor: COLORS.white,
+    padding: 10,
+    marginBottom: 15,
+    backgroundColor: COLORS.cardBackground,
     borderRadius: 8,
-    overflow: "hidden",
-    elevation: 3,
   },
   video: {
     height: 200,
+    borderRadius: 8,
+  },
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 10,
   },
   title: {
-    padding: 4,
+    flex: 1,
     fontSize: 16,
-    fontWeight: "bold",
-    color: "#333",
+    fontWeight: 'bold',
+    color: COLORS.textPrimary,
+  },
+  iconContainer: {
+    marginLeft: 10,
+    padding: 5,
   },
   noFavoritesText: {
     textAlign: "center",
@@ -116,10 +178,13 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: "center",
     marginTop: 20,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 5
   },
   closeButtonText: {
     color: COLORS.white,
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: "bold",
   },
 });

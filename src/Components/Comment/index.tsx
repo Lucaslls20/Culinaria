@@ -64,7 +64,7 @@ const Comment: React.FC<CommentProps> = ({ visible, onClose, videoId }) => {
   const [snackbarVisible, setSnackbarVisible] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [newComment, setNewComment] = useState("");
-  const [loading,setLoading] = useState(false)
+  const [loading, setLoading] = useState(false)
 
 
 
@@ -156,15 +156,15 @@ const Comment: React.FC<CommentProps> = ({ visible, onClose, videoId }) => {
 
   return (
     <Modal
-    isVisible={visible}
-    onBackdropPress={onClose}
-    onBackButtonPress={onClose}
-    backdropColor={COLORS.dark}
-    backdropOpacity={0.6}
-    animationIn="slideInUp"
-    animationOut="slideOutDown"
-    style={{ margin: 0 }}
-  >
+      isVisible={visible}
+      onBackdropPress={onClose}
+      onBackButtonPress={onClose}
+      backdropColor={COLORS.dark}
+      backdropOpacity={0.6}
+      animationIn="slideInUp"
+      animationOut="slideOutDown"
+      style={{ margin: 0 }}
+    >
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
           <View style={{ flexDirection: "row", gap: 8 }}>
@@ -179,6 +179,15 @@ const Comment: React.FC<CommentProps> = ({ visible, onClose, videoId }) => {
         <FlatList
           data={comments}
           keyExtractor={(item: CommentItem) => item.id}
+          getItemLayout={(data, index) => ({
+            length: 80, // Altura aproximada do item
+            offset: 80 * index,
+            index,
+          })}
+          initialNumToRender={5}
+          maxToRenderPerBatch={10}
+          windowSize={5}
+
           renderItem={({ item }) => (
             <>
               <Card style={styles.commentCard}>

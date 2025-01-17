@@ -17,7 +17,7 @@ import Videos from "../Pages/Videos";
 import Profile from "../Pages/Profile";
 import Settings from "../Components/Settings";
 import PrivacyPolicyScreen from "../Components/PrivacyPolicy";
-import OrderHistoryScreen from "../Components/OrderHistory";
+
 import FavoriteVideos from "../Components/FavoritesVideos";
 import TermsAndConditions from "../Components/TermsAndConditions";
 
@@ -164,11 +164,6 @@ export default function Routes() {
           options={{ headerShown: false }}
         />
        
-        <Stack.Screen
-          name="OrderHistory"
-          component={OrderHistoryScreen}
-          options={{ headerShown: false }}
-        />
         <Stack.Screen
           name="FavoriteVideos"
           component={FavoriteVideos}

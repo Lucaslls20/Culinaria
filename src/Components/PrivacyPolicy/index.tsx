@@ -1,6 +1,9 @@
 import React from 'react';
 import { View, ScrollView, StyleSheet } from 'react-native';
 import { Text, Appbar, Card } from 'react-native-paper';
+import { Linking } from 'react-native';
+import Feather from 'react-native-vector-icons/Feather'
+import { useNavigation } from '@react-navigation/native';
 
 const COLORS = {
   primary: "#FF7043",
@@ -14,10 +17,14 @@ const COLORS = {
 };
 
 const PrivacyPolicyScreen: React.FC = () => {
+  const navigation = useNavigation()
   return (
     <View style={styles.container}>
       <Appbar.Header style={styles.header}>
-        <Appbar.Content title="Privacy Policy" color={COLORS.white} />
+        <View style={{gap:10, flexDirection:'row', marginLeft:10,alignItems:'center', justifyContent:'center'}}>
+          <Feather name='arrow-left' size={25} color='#333' onPress={() => navigation.goBack()} />
+          <Appbar.Content title="Privacy Policy" color={COLORS.white} />
+        </View>
       </Appbar.Header>
 
       <ScrollView contentContainerStyle={styles.scrollViewContent}>
@@ -55,9 +62,9 @@ const PrivacyPolicyScreen: React.FC = () => {
             </Text>
 
             <Text style={styles.subtitle}>5. Contact</Text>
-            <Text style={styles.paragraph}>
-              If you have questions about this policy, contact us via email:
-              lucasReserva571@gmail.com
+            <Text style={styles.paragraph} onPress={() => Linking.openURL('mailto:lucasReserva571@gmail.com')}>
+              If you have questions about this policy, contact us via email: 
+              <Text style={{textDecorationLine:'underline'}}>lucasReserva571@gmail.com</Text>
             </Text>
 
             <Text style={styles.footer}>

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, View, ScrollView, Alert } from 'react-native';
+import { StyleSheet, View, ScrollView, Alert, Dimensions } from 'react-native';
 import { Text, Avatar, Divider, List, Button, ActivityIndicator, Snackbar } from 'react-native-paper';
 import { auth, db } from '../../Services/fireBaseConfig';
 import { User, sendPasswordResetEmail } from 'firebase/auth';
@@ -34,20 +34,19 @@ const Settings = ({ navigation }: SettingsProps) => {
         setSnackBarVisible(false)
     }
 
+    const { width } = Dimensions.get('window');
+    const avatarSize = width * 0.2; // Ajustar tamanho do avatar dinamicamente
+
+
     useEffect(() => {
         const unsubscribe = auth.onAuthStateChanged((currentUser) => {
             setUser(currentUser);
-            if (currentUser) {
-                fetchUserName(currentUser.uid); // Busca o nome do usuário no Firestore
-            } else {
-                setLoading(false);
-            }
+            if (currentUser) fetchUserName(currentUser.uid);
+            else setLoading(false);
         });
-
-
-
-        return unsubscribe;
+        return () => unsubscribe(); // Garante a limpeza do listener
     }, []);
+
 
     const fetchUserName = async (uid: string) => {
         try {
@@ -79,8 +78,7 @@ const Settings = ({ navigation }: SettingsProps) => {
             await sendPasswordResetEmail(auth, user.email);
             setSnackBarVisible(true)
             setSnackBarMessage(
-                `Change Password,
-                 A password reset email has been sent to the registered address.`
+                `Change Password, a password reset email has been sent to the registered address.`
             );
         } catch (error: any) {
             setSnackBarVisible(true)
@@ -88,9 +86,7 @@ const Settings = ({ navigation }: SettingsProps) => {
         }
     };
 
-    const onNotificationReceived = (notification: any) => {
-        Alert.alert("Notificação", notification.message || "Nova notificação recebida.");
-    };
+
 
     if (loading) {
         return (
@@ -105,7 +101,7 @@ const Settings = ({ navigation }: SettingsProps) => {
             <ScrollView style={styles.container}>
                 <View style={styles.header}>
                     <Avatar.Text
-                        size={64}
+                        size={avatarSize}
                         label={(userName?.[0] || "U").toUpperCase()} // Usa a primeira letra do nome do usuário
                         style={styles.avatar}
                     />
@@ -163,12 +159,13 @@ const Settings = ({ navigation }: SettingsProps) => {
                     textColor={COLORS.white}
                     style={styles.logoutButton}
                     onPress={() => navigation.goBack()}
+                    accessibilityLabel="Go back to the last page "
                 >
                     Go back
                 </Button>
             </ScrollView>
             <Snackbar
-                style={{ backgroundColor: COLORS.secondary }}
+                style={{ backgroundColor: COLORS.cardBackground }}
                 duration={6000}
                 visible={snackbarVisible}
                 onDismiss={onDismissSnackBar}
@@ -195,6 +192,10 @@ const styles = StyleSheet.create({
     },
     avatar: {
         backgroundColor: COLORS.primary,
+        elevation: 4, // Adiciona sombra
+        shadowColor: COLORS.shadow,
+        shadowOpacity: 0.2,
+        shadowRadius: 3,
     },
     name: {
         fontSize: 20,
@@ -218,6 +219,7 @@ const styles = StyleSheet.create({
     logoutButton: {
         margin: 20,
         borderRadius: 8,
+        elevation: 3
     },
     loadingContainer: {
         flex: 1,
@@ -229,10 +231,9 @@ const styles = StyleSheet.create({
         marginLeft: 20,
     },
     snackbarText: {
-        color: COLORS.placeholder,
-        fontSize: 16,
-        fontWeight: 'bold',
-        textAlign: 'center',
+        color:"#333",
+        fontSize: 12,
+       
     },
 
 });
